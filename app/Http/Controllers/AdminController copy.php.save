@@ -1,0 +1,908 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Models\Fakultas;
+use App\Models\Jurusan;
+use App\Models\Prodi;
+use App\Models\JenisPrestasi;
+use App\Models\KategoriPrestasi;
+use App\Models\TingkatPrestasi;
+use App\Models\Prestasi;
+use App\Models\TahunAkademik;
+use App\Models\TemplateSurat;
+use App\Imports\UsersImport;
+use App\Exports\TemplateAkunExport;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+
+class AdminController extends Controller
+{
+    /**
+     * Dashboard Utama Admin
+     */
+    public function dashboard()
+    {
+        return view('admin.dashboard');
+    }
+
+    /**
+     * Daftar Akun (Index) dengan Search, Filter, dan Sort
+     */
+    public function indexAkun(Request $request)
+    {
+        $query = User::query();
+
+        // 1. Search Global
+        if ($request->filled('search')) {
+            $search = strtolower($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('nim_nip', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%");
+
+                // Cek format dd/mm/yyyy
+                if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $search)) {
+                    $date = Carbon::createFromFormat('d/m/Y', $search)->format('Y-m-d');
+                    $q->orWhereDate('created_at', $date);
+                } else {
+                    $bulanIndo = [
+                        'januari' => '01',
+                        'februari' => '02',
+                        'maret' => '03',
+                        'april' => '04',
+                        'mei' => '05',
+                        'juni' => '06',
+                        'juli' => '07',
+                        'agustus' => '08',
+                        'september' => '09',
+                        'oktober' => '10',
+                        'november' => '11',
+                        'desember' => '12',
+                        'jan' => '01',
+                        'feb' => '02',
+                        'mar' => '03',
+                        'apr' => '04',
+                        'jun' => '06',
+                        'jul' => '07',
+                        'agu' => '08',
+                        'sep' => '09',
+                        'okt' => '10',
+                        'nov' => '11',
+                        'des' => '12'
+                    ];
+
+                    if (array_key_exists($search, $bulanIndo)) {
+                        $q->orWhereMonth('created_at', $bulanIndo[$search]);
+                    } elseif (is_numeric($search) && strlen($search) == 4) {
+                        $q->orWhereYear('created_at', $search);
+                    }
+                }
+            });
+        }
+
+        // 2. Filter Role
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        // 3. Sorting
+        if ($request->filled('sort') && $request->filled('direction')) {
+            $query->orderBy($request->sort, $request->direction);
+        } else {
+            $query->latest();
+        }
+
+        $users = $query->paginate(10)->withQueryString();
+        return view('admin.manajemen-akun', compact('users'));
+    }
+
+    /**
+     * Halaman Form Tambah Akun
+     */
+    public function createAkun()
+    {
+        return view('admin.manajemen-akun-create');
+    }
+
+    /**
+     * Simpan Akun Baru (Store)
+     */
+    public function storeAkun(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'nim_nip' => 'required|string|unique:users',
+            'email' => 'nullable|email|unique:users',
+            'role' => 'nullable|string',
+            'password' => 'nullable|min:8|confirmed', // Nullable karena ada default
+        ]);
+
+        // Jika password kosong, pakai nim_nip. Jika tidak, pakai inputan.
+        $passwordFinal = $request->filled('password')
+            ? Hash::make($request->password)
+            : Hash::make($request->nim_nip);
+
+        User::create([
+            'name' => $request->name,
+            'nim_nip' => $request->nim_nip,
+            'email' => $request->email,
+            'role' => $request->role ?? 'mahasiswa', // Default jika tidak pilih role
+            'password' => $passwordFinal,
+        ]);
+
+        return redirect()->route('admin.manajemen-akun')->with('success', 'Akun berhasil ditambahkan!');
+    }
+
+    /**
+     * Halaman Form Edit Akun
+     */
+    public function editAkun($id)
+    {
+        $user = User::findOrFail($id);
+        return view('admin.manajemen-akun-edit', compact('user'));
+    }
+
+    /**
+     * Update Data Akun
+     */
+    public function updateAkun(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $request->validate([
+            'name'    => 'required|string|max:255',
+            'email'   => 'nullable|email|max:255|unique:users,email,' . $id,
+            'nim_nip' => 'required|string|unique:users,nim_nip,' . $id,
+            'role'    => 'required|string',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->nim_nip = $request->nim_nip;
+        $user->role = $request->role;
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return redirect()->route('admin.manajemen-akun')->with('success', 'Akun berhasil diperbarui!');
+    }
+
+    /**
+     * Hapus Akun (Destroy)
+     */
+    public function destroyAkun($id)
+    {
+        $user = User::findOrFail($id);
+
+        // if (auth()->id() == $user->id) {
+        //     return back()->with('error', 'Anda tidak bisa menghapus akun sendiri!');
+        // }
+
+        $user->delete();
+        return back()->with('success', 'Akun berhasil dihapus!');
+    }
+
+    public function importAkun(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
+        ]);
+
+        Excel::import(new UsersImport, $request->file('file'));
+
+        return redirect()->route('admin.manajemen-akun')->with('success', 'Banyak akun berhasil di-import!');
+    }
+
+    public function exportFormatAkun()
+    {
+        return Excel::download(new TemplateAkunExport, 'template_akun.xlsx');
+    }
+
+    //========================================================================
+    //========================================================================
+    //========================================================================
+
+    /**
+     * Bagian Manajemen Konten & Lainnya
+     */
+    public function indexManajemenKonten(Request $request)
+    {
+        // Ambil Konten (Berita/Artikel)
+        $kontens = \App\Models\Konten::latest()->paginate(10, ['*'], 'page_konten');
+
+        // Ambil Prestasi yang SUDAH APPROVED tapi BELUM PUBLISH (untuk divalidasi publikasinya)
+        $prestasiApproved = \App\Models\Prestasi::with(['mahasiswa', 'tingkat'])
+            ->where('status', 'approved')
+            ->latest()
+            ->paginate(10, ['*'], 'page_prestasi');
+
+        return view('admin.manajemen-konten', compact('kontens', 'prestasiApproved'));
+    }
+
+    public function createKonten()
+    {
+        return view('admin.manajemen-konten-create');
+    }
+
+    public function storeKonten(Request $request)
+    {
+        // 1. Validasi Input
+        $request->validate([
+            'title'     => 'required|max:255',
+            'category'  => 'required',
+            'content'   => 'required',
+            'thumbnail' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', // Max 2MB
+        ]);
+
+        // 2. Handle Upload Gambar (Thumbnail)
+        $thumbnailPath = null;
+        if ($request->hasFile('thumbnail')) {
+            // Simpan ke folder 'public/konten'
+            $thumbnailPath = $request->file('thumbnail')->store('konten', 'public');
+        }
+
+        // 3. Simpan ke Database
+        \App\Models\Konten::create([
+            'user_id'      => auth()->id(),
+            'title'         => $request->title,
+            'slug'          => Str::slug($request->title) . '-' . time(), // Slug unik
+            'category'      => $request->category,
+            'content'       => $request->content,
+            'thumbnail'     => $thumbnailPath,
+            'is_published'  => $request->has('is_published'), // Bernilai true jika dicentang
+        ]);
+
+        // 4. Redirect dengan pesan sukses
+        return redirect()->route('admin.manajemen-konten')->with('success', 'Konten berhasil diterbitkan!');
+    }
+
+    public function editKonten($id)
+    {
+        $konten = \App\Models\Konten::findOrFail($id);
+        return view('admin.manajemen-konten-edit', compact('konten'));
+    }
+
+    public function updateKonten(Request $request, $id)
+    {
+        $konten = \App\Models\Konten::findOrFail($id);
+
+        $request->validate([
+            'title' => 'required|max:255',
+            'category' => 'required',
+            'content' => 'required',
+            'thumbnail' => 'nullable|image|max:2048'
+        ]);
+
+        $data = [
+            'title' => $request->title,
+            'category' => $request->category,
+            'content' => $request->content,
+            'is_published' => $request->has('is_published')
+        ];
+
+        if ($request->hasFile('thumbnail')) {
+            // Hapus foto lama jika ada
+            if ($konten->thumbnail) {
+                Storage::disk('public')->delete($konten->thumbnail);
+            }
+            $data['thumbnail'] = $request->file('thumbnail')->store('konten', 'public');
+        }
+
+        $konten->update($data);
+
+        return redirect()->route('admin.manajemen-konten')->with('success', 'Konten berhasil diperbarui!');
+    }
+
+    public function destroyKonten($id)
+    {
+        $konten = \App\Models\Konten::findOrFail($id);
+
+        // Hapus file gambar jika ada
+        if ($konten->thumbnail) {
+            Storage::disk('public')->delete($konten->thumbnail);
+        }
+
+        $konten->delete();
+        return back()->with('success', 'Berita berhasil dihapus.');
+    }
+    //========================================================================
+    //========================================================================
+    //========================================================================
+
+    /**
+     * Halaman Utama Master Data (Dashboard Master Data)
+     */
+    public function masterData()
+    {
+        return view('admin.master-data.index');
+    }
+
+    /**
+     * Manajemen Fakultas
+     */
+    public function masterDataFakultas()
+    {
+        $fakultas = Fakultas::withCount('jurusan')->latest()->paginate(10);
+        return view('admin.master-data-fakultas', compact('fakultas'));
+    }
+
+    // Simpan Fakultas Baru
+    public function storeFakultas(Request $request)
+    {
+        $request->validate([
+            'nama_fakultas' => 'required|string|max:255|unique:fakultas,nama_fakultas',
+        ]);
+
+        Fakultas::create([
+            'nama_fakultas' => strtoupper($request->nama_fakultas) // Standarisasi huruf kapital
+        ]);
+
+        return redirect()->back()->with('success', 'Fakultas baru berhasil ditambahkan!');
+    }
+
+    // Update Fakultas
+    public function updateFakultas(Request $request, $id)
+    {
+        $request->validate([
+            'nama_fakultas' => 'required|string|max:255|unique:fakultas,nama_fakultas,' . $id,
+        ]);
+
+        $fakultas = Fakultas::findOrFail($id);
+        $fakultas->update([
+            'nama_fakultas' => strtoupper($request->nama_fakultas)
+        ]);
+
+        return redirect()->back()->with('success', 'Data fakultas berhasil diperbarui!');
+    }
+
+    // Hapus Fakultas
+    public function destroyFakultas($id)
+    {
+        $fakultas = Fakultas::findOrFail($id);
+
+        // Cek apakah ada jurusan di bawahnya (Proteksi data)
+        if ($fakultas->jurusan()->count() > 0) {
+            return redirect()->back()->with('error', 'Fakultas tidak bisa dihapus karena masih memiliki data jurusan!');
+        }
+
+        $fakultas->delete();
+        return redirect()->back()->with('success', 'Fakultas berhasil dihapus!');
+    }
+
+    /**
+     * Manajemen Jurusan
+     */
+    public function masterDataJurusan()
+    {
+        $fakultas = Fakultas::all();
+        $jurusan = Jurusan::with('fakultas')->withCount('prodi')->latest()->paginate(10);
+        return view('admin.master-data-jurusan', compact('jurusan', 'fakultas'));
+    }
+
+    // Simpan Jurusan
+    public function storeJurusan(Request $request)
+    {
+        $request->validate([
+            'fakultas_id' => 'required|exists:fakultas,id',
+            'nama_jurusan' => 'required|string|max:255|unique:jurusan,nama_jurusan',
+        ]);
+
+        Jurusan::create([
+            'fakultas_id' => $request->fakultas_id,
+            'nama_jurusan' => strtoupper($request->nama_jurusan)
+        ]);
+
+        return redirect()->back()->with('success', 'Jurusan berhasil ditambahkan!');
+    }
+
+    // Update Jurusan
+    public function updateJurusan(Request $request, $id)
+    {
+        $request->validate([
+            'fakultas_id' => 'required|exists:fakultas,id',
+            'nama_jurusan' => 'required|string|max:255|unique:jurusan,nama_jurusan,' . $id,
+        ]);
+
+        $jurusan = Jurusan::findOrFail($id);
+        $jurusan->update([
+            'fakultas_id' => $request->fakultas_id,
+            'nama_jurusan' => strtoupper($request->nama_jurusan)
+        ]);
+
+        return redirect()->back()->with('success', 'Jurusan berhasil diperbarui!');
+    }
+
+    // Hapus Jurusan
+    public function destroyJurusan($id)
+    {
+        $jurusan = Jurusan::findOrFail($id);
+
+        if ($jurusan->prodi()->count() > 0) {
+            return redirect()->back()->with('error', 'Jurusan tidak bisa dihapus karena masih memiliki data Program Studi!');
+        }
+
+        $jurusan->delete();
+        return redirect()->back()->with('success', 'Jurusan berhasil dihapus!');
+    }
+
+    /**
+     * Manajemen Program Studi
+     */
+    public function masterDataProdi()
+    {
+        $fakultas = Fakultas::all();
+        $jurusan = Jurusan::all();
+        $prodi = Prodi::with('jurusan.fakultas')->latest()->paginate(10);
+        return view('admin.master-data-prodi', compact('prodi', 'jurusan', 'fakultas'));
+    }
+
+    /**
+     * Simpan Prodi Baru
+     */
+    public function storeProdi(Request $request)
+    {
+        $request->validate([
+            'jurusan_id' => 'required|exists:jurusan,id',
+            'nama_prodi' => 'required|string|max:255|unique:prodi,nama_prodi',
+        ]);
+
+        Prodi::create([
+            'jurusan_id' => $request->jurusan_id,
+            'nama_prodi' => strtoupper($request->nama_prodi)
+        ]);
+
+        return redirect()->back()->with('success', 'Program Studi berhasil ditambahkan!');
+    }
+
+    /**
+     * Update Data Prodi
+     */
+    public function updateProdi(Request $request, $id)
+    {
+        $request->validate([
+            'jurusan_id' => 'required|exists:jurusan,id',
+            'nama_prodi' => 'required|string|max:255|unique:prodi,nama_prodi,' . $id,
+        ]);
+
+        $prodi = Prodi::findOrFail($id);
+        $prodi->update([
+            'jurusan_id' => $request->jurusan_id,
+            'nama_prodi' => strtoupper($request->nama_prodi)
+        ]);
+
+        return redirect()->back()->with('success', 'Program Studi berhasil diperbarui!');
+    }
+
+    /**
+     * Hapus Prodi
+     */
+    public function destroyProdi($id)
+    {
+        $prodi = Prodi::findOrFail($id);
+
+        // if ($prodi->user()->count() > 0) {
+        //     return redirect()->back()->with('error', 'Prodi tidak bisa dihapus karena masih memiliki data mahasiswa!');
+        // }
+
+        $prodi->delete();
+        return redirect()->back()->with('success', 'Program Studi berhasil dihapus!');
+    }
+
+    /**
+     * Pengaturan Atribut Prestasi
+     */
+    public function masterDataAtributPrestasi()
+    {
+        $jenis = JenisPrestasi::all();
+        $kategori = KategoriPrestasi::all();
+        $tingkat = TingkatPrestasi::all();
+
+        return view('admin.master-data-atribut-prestasi', compact('jenis', 'kategori', 'tingkat'));
+    }
+
+    /* --- JENIS PRESTASI --- */
+    public function storeJenis(Request $request)
+    {
+        $request->validate(['nama_jenis' => 'required|string|unique:jenis_prestasi,nama_jenis']);
+        JenisPrestasi::create(['nama_jenis' => strtoupper($request->nama_jenis)]);
+        return redirect()->back()->with('success', 'Jenis prestasi berhasil ditambahkan!');
+    }
+
+    public function updateJenis(Request $request, $id)
+    {
+        $request->validate(['nama_jenis' => 'required|string|unique:jenis_prestasi,nama_jenis,' . $id]);
+        JenisPrestasi::findOrFail($id)->update(['nama_jenis' => strtoupper($request->nama_jenis)]);
+        return redirect()->back()->with('success', 'Jenis prestasi diperbarui!');
+    }
+
+    public function destroyJenis($id)
+    {
+        JenisPrestasi::findOrFail($id)->delete();
+        return redirect()->back()->with('success', 'Jenis prestasi dihapus!');
+    }
+
+    /* --- KATEGORI PRESTASI --- */
+    public function storeKategori(Request $request)
+    {
+        $request->validate(['nama_kategori' => 'required|string|unique:kategori_prestasi,nama_kategori']);
+        KategoriPrestasi::create(['nama_kategori' => strtoupper($request->nama_kategori)]);
+        return redirect()->back()->with('success', 'Kategori prestasi berhasil ditambahkan!');
+    }
+
+    public function updateKategori(Request $request, $id)
+    {
+        $request->validate(['nama_kategori' => 'required|string|unique:kategori_prestasi,nama_kategori,' . $id]);
+        KategoriPrestasi::findOrFail($id)->update(['nama_kategori' => strtoupper($request->nama_kategori)]);
+        return redirect()->back()->with('success', 'Kategori prestasi diperbarui!');
+    }
+
+    public function destroyKategori($id)
+    {
+        KategoriPrestasi::findOrFail($id)->delete();
+        return redirect()->back()->with('success', 'Kategori prestasi dihapus!');
+    }
+
+    /* --- TINGKAT PRESTASI --- */
+    public function storeTingkat(Request $request)
+    {
+        $request->validate(['nama_tingkat' => 'required|string|unique:tingkat_prestasi,nama_tingkat']);
+        TingkatPrestasi::create(['nama_tingkat' => strtoupper($request->nama_tingkat)]);
+        return redirect()->back()->with('success', 'Tingkat prestasi berhasil ditambahkan!');
+    }
+
+    public function updateTingkat(Request $request, $id)
+    {
+        $request->validate(['nama_tingkat' => 'required|string|unique:tingkat_prestasi,nama_tingkat,' . $id]);
+        TingkatPrestasi::findOrFail($id)->update(['nama_tingkat' => strtoupper($request->nama_tingkat)]);
+        return redirect()->back()->with('success', 'Tingkat prestasi diperbarui!');
+    }
+
+    public function destroyTingkat($id)
+    {
+        TingkatPrestasi::findOrFail($id)->delete();
+        return redirect()->back()->with('success', 'Tingkat prestasi dihapus!');
+    }
+
+    /**
+     * Pengaturan Tahun Akademik
+     */
+    public function masterDataSTA()
+    {
+        $tahun = TahunAkademik::first(); // Ambil tahun yang aktif
+        $templates = TemplateSurat::all();
+        return view('admin.master-data-sta', compact('tahun', 'templates'));
+    }
+
+    public function updateTahunAkademik(Request $request, $id)
+    {
+        $request->validate(['tahun' => 'required|string']);
+        $tahun = TahunAkademik::findOrFail($id);
+        $tahun->update(['tahun' => $request->tahun]);
+
+        return redirect()->back()->with('success', 'Tahun Akademik berhasil diperbarui!');
+    }
+
+    public function updateTemplateSurat(Request $request, $id)
+    {
+        $template = TemplateSurat::findOrFail($id);
+        // Ubah nama template jadi kecil dan ganti spasi dengan underscore (misal: "LAPORAN" jadi "laporan")
+        $namaClean = strtolower(str_replace(' ', '_', $template->nama_template));
+
+        // 1. Validasi Dinamis
+        if (strtoupper($template->nama_template) == 'REKAP') {
+            $request->validate(['file' => 'required|mimes:xlsx,xls|max:5120']);
+        } else {
+            $request->validate(['file' => 'required|mimes:doc,docx,pdf|max:5120']);
+        }
+
+        if ($request->hasFile('file')) {
+            // 2. Hapus file fisik lama
+            if ($template->file_path && Storage::disk('public')->exists($template->file_path)) {
+                Storage::disk('public')->delete($template->file_path);
+            }
+
+            // 3. LOGIKA RENAME OTOMATIS
+            $extension = $request->file('file')->getClientOriginalExtension();
+            $newFileName = "template_" . $namaClean . "." . $extension; // Hasil: template_laporan.docx
+
+            // 4. Simpan dengan nama baru ke folder templates
+            $path = $request->file('file')->storeAs('templates', $newFileName, 'public');
+
+            // 5. Update Database
+            $template->update(['file_path' => $path]);
+
+            return redirect()->back()->with('success', "Template $template->nama_template berhasil diupdate dengan nama: $newFileName");
+        }
+    }
+
+    //========================================================================
+    //========================================================================
+    //========================================================================
+    public function indexPrestasi(Request $request)
+    {
+        $query = Prestasi::with(['mahasiswa', 'tingkat', 'kategori', 'jenis', 'tahunAkademik']);
+
+        // 1. Pencarian Teks
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('nama_prestasi', 'like', "%{$search}%")
+                ->orWhereHas('mahasiswa', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                });
+        }
+
+        // 2. Filter Kepesertaan (Individu / Tim)
+        if ($request->filled('kepesertaan')) {
+            if ($request->kepesertaan == 'individu') {
+                $query->has('mahasiswa', '=', 1);
+            } elseif ($request->kepesertaan == 'tim') {
+                $query->has('mahasiswa', '>', 1);
+            }
+        }
+
+        // 3. Filter Master Data (Jenis, Kategori, Tingkat)
+        if ($request->filled('jenis_id')) $query->where('jenis_id', $request->jenis_id);
+        if ($request->filled('kategori_id')) $query->where('kategori_id', $request->kategori_id);
+        if ($request->filled('tingkat_id')) $query->where('tingkat_id', $request->tingkat_id);
+
+        // 4. Filter Status
+        if ($request->filled('status')) $query->where('status', $request->status);
+
+        // 5. Filter Publikasi
+        if ($request->filled('is_published')) {
+            $query->where('is_published', $request->is_published == '1' ? true : false);
+        }
+
+        // 6. Sorting Tanggal Sertifikat
+        if ($request->filled('sort_tanggal')) {
+            $query->orderBy('tanggal_peroleh', $request->sort_tanggal); // 'asc' atau 'desc'
+        } else {
+            $query->latest(); // Default
+        }
+
+        $prestasi = $query->paginate(10)->withQueryString();
+
+        // Ambil data master untuk dikirim ke Dropdown Filter di View
+        $masterTingkat = TingkatPrestasi::all();
+        $masterKategori = KategoriPrestasi::all();
+        $masterJenis = JenisPrestasi::all();
+
+        return view('admin.prestasi', compact('prestasi', 'masterTingkat', 'masterKategori', 'masterJenis'));
+    }
+
+    public function createPrestasi()
+    {
+        $mahasiswa = User::where('role', 'mahasiswa')->get();
+        // Ambil semua master data untuk dropdown form
+        $tingkat = TingkatPrestasi::all();
+        $kategori = KategoriPrestasi::all();
+        $jenis = JenisPrestasi::all();
+        $tahunAkademik = TahunAkademik::all();
+
+        return view('admin.prestasi-create', compact('tingkat', 'mahasiswa', 'kategori', 'jenis', 'tahunAkademik'));
+    }
+
+    public function storePrestasi(Request $request)
+    {
+        // 1. Validasi Input (Ubah bagian kategori_id dan jenis_id)
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'nama_prestasi' => 'required|string|max:255',
+            'tingkat_id' => 'required|exists:tingkat_prestasi,id',
+            'tahun_akademik_id' => 'required|exists:tahun_akademik,id',
+            'sertifikat' => 'required|file|mimes:pdf,jpg,png|max:2048',
+            'tanggal_peroleh' => 'required|date',
+            'deskripsi' => 'nullable|string',
+            // Hapus rule exists: jika valuenya adalah 'lainnya'
+            'kategori_id' => 'required',
+            'jenis_id' => 'required',
+            // Validasi khusus jika memilih lainnya
+            'kategori_baru' => 'required_if:kategori_id,lainnya|nullable|string|max:255',
+            'jenis_baru' => 'required_if:jenis_id,lainnya|nullable|string|max:255',
+        ]);
+
+        // 2. Logika "Lainnya" (Insert ke Master Data on-the-fly)
+        $kategoriIdFinal = $request->kategori_id;
+        if ($request->kategori_id === 'lainnya') {
+            // Cek apakah sudah ada untuk menghindari duplikat
+            $newKategori = \App\Models\KategoriPrestasi::firstOrCreate(
+                ['nama_kategori' => strtoupper($request->kategori_baru)]
+            );
+            $kategoriIdFinal = $newKategori->id;
+        }
+
+        $jenisIdFinal = $request->jenis_id;
+        if ($request->jenis_id === 'lainnya') {
+            $newJenis = \App\Models\JenisPrestasi::firstOrCreate(
+                ['nama_jenis' => strtoupper($request->jenis_baru)]
+            );
+            $jenisIdFinal = $newJenis->id;
+        }
+
+        // 3. Upload File Sertifikat
+        $fileName = time() . '_' . $request->file('sertifikat')->getClientOriginalName();
+        $path = $request->file('sertifikat')->storeAs('sertifikat_prestasi', $fileName, 'public');
+
+        // 4. Simpan Data Inti (Gunakan variabel $kategoriIdFinal dan $jenisIdFinal)
+        $prestasi = Prestasi::create([
+            'nama_prestasi' => $request->nama_prestasi,
+            'tingkat_id' => $request->tingkat_id,
+            'kategori_id' => $kategoriIdFinal,
+            'jenis_id' => $jenisIdFinal,
+            'tahun_akademik_id' => $request->tahun_akademik_id,
+            'sertifikat' => $path,
+            'tanggal_peroleh' => $request->tanggal_peroleh,
+            'deskripsi' => $request->deskripsi,
+            'status' => 'approved',
+            'is_published' => false,
+        ]);
+
+        // 5. Simpan Relasi Pivot Tim
+        $prestasi->mahasiswa()->attach($request->user_ids);
+
+        return redirect()->route('admin.prestasi')->with('success', 'Prestasi berhasil disimpan dan data baru telah direkam!');
+    }
+
+    public function showPrestasi($id)
+    {
+        $prestasi = Prestasi::with(['mahasiswa', 'tingkat', 'kategori', 'jenis', 'tahunAkademik'])->findOrFail($id);
+        return view('admin.prestasi-show', compact('prestasi'));
+    }
+    public function editPrestasi($id)
+    {
+        $prestasi = Prestasi::with('mahasiswa')->findOrFail($id);
+
+        // 1. Ambil data master untuk Dropdown
+        $mahasiswa = User::where('role', 'mahasiswa')->get();
+        $tingkat = \App\Models\TingkatPrestasi::all();
+        $kategori = \App\Models\KategoriPrestasi::all();
+        $jenis = \App\Models\JenisPrestasi::all();
+        $tahunAkademik = \App\Models\TahunAkademik::all();
+
+        // 2. Sortir data mahasiswa yang sudah terpilih di PHP (Bukan di Blade/JS)
+        $mahasiswaTerpilih = [];
+        foreach ($prestasi->mahasiswa as $m) {
+            $mahasiswaTerpilih[] = [
+                'id' => (string) $m->id,
+                'name' => $m->name,
+                'nim' => $m->nim_nip
+            ];
+        }
+
+        // 3. Lempar semua data ke View
+        return view('admin.prestasi-edit', compact(
+            'prestasi',
+            'tingkat',
+            'mahasiswa',
+            'kategori',
+            'jenis',
+            'tahunAkademik',
+            'mahasiswaTerpilih'
+        ));
+    }
+
+    public function updatePrestasi(Request $request, $id)
+    {
+        $prestasi = Prestasi::findOrFail($id);
+
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'nama_prestasi' => 'required|string|max:255',
+            'tingkat_id' => 'required|exists:tingkat_prestasi,id',
+            'jenis_id' => 'required|exists:jenis_prestasi,id',
+            'kategori_id' => 'required|exists:kategori_prestasi,id',
+            'tahun_akademik_id' => 'required|exists:tahun_akademik,id',
+            'sertifikat' => 'nullable|file|mimes:pdf,jpg,png|max:2048', // NULLABLE SAAT UPDATE
+            'tanggal_peroleh' => 'required|date',
+        ]);
+
+        $data = $request->except(['sertifikat', 'user_ids']);
+
+        if ($request->hasFile('sertifikat')) {
+            if ($prestasi->sertifikat && Storage::disk('public')->exists($prestasi->sertifikat)) {
+                Storage::disk('public')->delete($prestasi->sertifikat);
+            }
+            $fileName = time() . '_' . $request->file('sertifikat')->getClientOriginalName();
+            $data['sertifikat'] = $request->file('sertifikat')->storeAs('sertifikat_prestasi', $fileName, 'public');
+        }
+
+        $prestasi->update($data);
+        $prestasi->mahasiswa()->sync($request->user_ids); // SYNC untuk update tim
+
+        return redirect()->route('admin.prestasi')->with('success', 'Data prestasi berhasil diperbarui!');
+    }
+
+    public function validasiPrestasi()
+    {
+        $pending = Prestasi::with(['mahasiswa', 'tingkat', 'kategori', 'jenis', 'tahunAkademik'])
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(10);
+        return view('admin.prestasi-validasi', compact('pending'));
+    }
+
+    public function updateStatusPrestasi(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'alasan_ditolak' => 'required_if:status,rejected',
+        ]);
+
+        $prestasi = Prestasi::findOrFail($id);
+        $prestasi->update([
+            'status' => $request->status,
+            'alasan_ditolak' => $request->status === 'rejected' ? $request->alasan_ditolak : null
+        ]);
+
+        return back()->with('success', 'Status validasi berhasil diperbarui!');
+    }
+
+    public function publishPrestasi($id)
+    {
+        $prestasi = Prestasi::with(['mahasiswa', 'tingkat'])->findOrFail($id);
+
+        // 1. Update status publikasi di tabel prestasi
+        $prestasi->update(['is_published' => true]);
+
+        // 2. Buat berita OTOMATIS di tabel Konten
+        // Kita susun kalimatnya secara programmatik
+        $namaMhs = $prestasi->mahasiswa->pluck('name')->implode(', ');
+        $tingkat = $prestasi->tingkat->nama_tingkat;
+
+        \App\Models\Konten::updateOrCreate(
+            ['prestasi_id' => $prestasi->id], // Biar nggak duplikat kalau diklik publish 2x
+            [
+                'user_id' => auth()->id(),
+                'title' => "Prestasi Membanggakan: " . $prestasi->nama_prestasi,
+                'category' => 'berita', // Masuk kategori berita
+                'content' => "Selamat kepada {$namaMhs} yang telah berhasil meraih prestasi dalam ajang {$prestasi->nama_prestasi} tingkat {$tingkat}. Capaian ini merupakan bentuk dedikasi mahasiswa Unimed dalam mengharumkan nama almamater.",
+                'thumbnail' => $prestasi->sertifikat, // Sertifikat otomatis jadi cover berita
+                'is_published' => true,
+            ]
+        );
+
+        return back()->with('success', 'Prestasi berhasil dipublikasikan sebagai berita!');
+    }
+
+    public function takedownPrestasi($id)
+    {
+        $prestasi = Prestasi::findOrFail($id);
+        $prestasi->update(['is_published' => false]);
+
+        // Hapus artikel berita otomatis yang berhubungan dengan prestasi ini
+        \App\Models\Konten::where('prestasi_id', $id)->delete();
+
+        return back()->with('success', 'Prestasi ditarik dan artikel terkait otomatis dihapus.');
+    }
+
+    public function destroyPrestasi($id)
+    {
+        $prestasi = Prestasi::findOrFail($id);
+
+        // Hapus file fisik sertifikat
+        if (Storage::disk('public')->exists($prestasi->sertifikat)) {
+            Storage::disk('public')->delete($prestasi->sertifikat);
+        }
+
+        // Hapus data dari database (Relasi pivot akan otomatis terhapus karena 'onDelete cascade')
+        $prestasi->delete();
+
+        return back()->with('success', 'Data prestasi telah dihapus permanen.');
+    }
+
+    public function laporanRekap()
+    {
+        return view('admin.prestasi-laporan-rekap');
+    }
+}
