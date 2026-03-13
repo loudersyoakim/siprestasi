@@ -10,7 +10,25 @@ class DashboardController extends Controller
 
     public function adminDashboard()
     {
-        return view('admin.dashboard');
+        if (auth()->user()->role === 'super_admin') {
+            return $this->superAdminDashboard();
+        }
+
+        $data = [
+            'total_mahasiswa' => User::where('role', 'mahasiswa')->count(),
+        ];
+
+        return view('admin.dashboard', $data);
+    }
+
+    public function superAdminDashboard()
+    {
+        $data = [
+            'total_admin' => User::where('role', 'admin')->count(),
+            'total_semua_user' => User::count(),
+        ];
+
+        return view('admin.super-dashboard', $data);
     }
 
     public function wdDashboard()

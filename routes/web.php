@@ -9,34 +9,43 @@ use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfilController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Http\Request;
-use App\Models\User;
 
+// =================================================================
+// RUTE PUBLIK & LANDING PAGE
+// =================================================================
 Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/api/statistik-landing', [LandingController::class, 'getStatistik']);
+Route::get('/artikel', [LandingController::class, 'indexAll'])->name('artikel.index');
+Route::get('/artikel/{slug}', [LandingController::class, 'show'])->name('artikel.show');
 
+// =================================================================
+// RUTE AUTENTIKASI (Sesuai AuthController Manual)
+// =================================================================
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.store');
 
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->name('register.store');
 
-Route::get('/api/statistik-landing', [App\Http\Controllers\LandingController::class, 'getStatistik']);
+// Tambahan: Rute Logout agar fungsi logout di AuthController bisa dipanggil
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/artikel', [LandingController::class, 'indexAll'])->name('artikel.index');
-Route::get('/artikel/{slug}', [LandingController::class, 'show'])->name('artikel.show');
 
+// =================================================================
+// RUTE SETELAH LOGIN
+// =================================================================
 Route::middleware(['auth'])->group(function () {
 
-    // Group Admin
-    Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // -------------------------------------------------------------
+    // 1. Group Admin & Super Admin (Digabung agar sama-sama bisa kelola data)
+    // -------------------------------------------------------------
+    Route::middleware(['role:admin,super_admin'])->prefix('admin')->group(function () {
 
-        // Dashboard Utama
-        Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard');
+        Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
+        Route::get('/super-admin/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('super_admin.dashboard');
 
         // Manajemen Akun 
-        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('manajemen-akun')->group(function () {
+        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('admin.manajemen-akun')->group(function () {
             Route::get('/', 'indexManajemenAkun');
             Route::get('/create', 'createAkun')->name('.create');
             Route::post('/', 'storeAkun')->name('.store');
@@ -47,9 +56,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/export-template', 'exportFormatAkun')->name('.export-format');
         });
 
-
         // Manajemen Konten
-        Route::controller(ManajemenKontenController::class)->prefix('manajemen-konten')->name('manajemen-konten')->group(function () {
+        Route::controller(ManajemenKontenController::class)->prefix('manajemen-konten')->name('admin.manajemen-konten')->group(function () {
             Route::get('/', 'indexManajemenKonten');
             Route::get('/create', 'createKonten')->name('.create');
             Route::post('/', 'storeKonten')->name('.store');
@@ -58,9 +66,8 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{id}', 'destroyKonten')->name('.destroy');
         });
 
-
         // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('prestasi')->group(function () {
+        Route::controller(PrestasiController::class)->prefix('prestasi')->name('admin.prestasi')->group(function () {
             Route::get('/', 'indexPrestasi');
             Route::get('/create', 'createPrestasi')->name('.create');
             Route::post('/', 'storePrestasi')->name('.store');
@@ -74,55 +81,53 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
 
             Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedowm', 'takeDownPrestasi')->name('.takedown');
+            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown'); // Diperbaiki dari takedowm
             Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
         });
 
-
         // Master Data 
-        Route::controller(MasterDataController::class)->prefix('master-data')->name('master-data')->group(function () {
+        Route::controller(MasterDataController::class)->prefix('master-data')->name('admin.master-data')->group(function () {
             Route::get('/', 'indexMasterData');
-            // fakultas
+
+            // Fakultas, Jurusan, Prodi
             Route::get('/fakultas', 'masterDataFakultas')->name('.fakultas');
             Route::post('/fakultas', 'storeFakultas')->name('.fakultas.store');
             Route::put('/fakultas/{id}', 'updateFakultas')->name('.fakultas.update');
             Route::delete('/fakultas/{id}', 'destroyFakultas')->name('.fakultas.destroy');
-            // jurusan
+
             Route::get('/jurusan', 'masterDataJurusan')->name('.jurusan');
             Route::post('/jurusan', 'storeJurusan')->name('.jurusan.store');
             Route::put('/jurusan/{id}', 'updateJurusan')->name('.jurusan.update');
             Route::delete('/jurusan/{id}', 'destroyJurusan')->name('.jurusan.destroy');
-            // prodi
+
             Route::get('/prodi', 'masterDataProdi')->name('.prodi');
             Route::post('/prodi', 'storeProdi')->name('.prodi.store');
             Route::put('/prodi/{id}', 'updateProdi')->name('.prodi.update');
             Route::delete('/prodi/{id}', 'destroyProdi')->name('.prodi.destroy');
-            // STA  
+
+            // STA 
             Route::get('/sta', 'masterDataSTA')->name('.sta');
             Route::post('/tahun-akademik/update/{id}', 'updateTahunAkademik')->name('.tahun.update');
             Route::post('/template-surat/update/{id}', 'updateTemplateSurat')->name('.template.update');
 
             // Atribut Prestasi
             Route::get('/atribut-prestasi', 'masterDataAtributPrestasi')->name('.atribut-prestasi');
-            // Jenis Prestasi
             Route::post('/jenis', 'storeJenis')->name('.jenis.store');
             Route::put('/jenis/{id}', 'updateJenis')->name('.jenis.update');
             Route::delete('/jenis/{id}', 'destroyJenis')->name('.jenis.destroy');
-            // Kategori Prestasi
             Route::post('/kategori', 'storeKategori')->name('.kategori.store');
             Route::put('/kategori/{id}', 'updateKategori')->name('.kategori.update');
             Route::delete('/kategori/{id}', 'destroyKategori')->name('.kategori.destroy');
-            // Tingkat Prestasi
             Route::post('/tingkat', 'storeTingkat')->name('.tingkat.store');
             Route::put('/tingkat/{id}', 'updateTingkat')->name('.tingkat.update');
             Route::delete('/tingkat/{id}', 'destroyTingkat')->name('.tingkat.destroy');
         });
     });
 
-    // Group Mahasiswa 
-    Route::middleware(['auth', 'role:mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
-
-        // Dashboard
+    // -------------------------------------------------------------
+    // 2. Group Mahasiswa 
+    // -------------------------------------------------------------
+    Route::middleware(['role:mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'mahasiswaDashboard'])->name('dashboard');
 
         // Profil 
@@ -145,9 +150,10 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
-
-    // Group WD (Wakil Dekan 2/3)
-    Route::middleware(['role:wd'])->prefix('wd')->name('wd.')->group(function () {
+    // -------------------------------------------------------------
+    // 3. Group Wakil Dekan (Disesuaikan dari wd menjadi wakil_dekan)
+    // -------------------------------------------------------------
+    Route::middleware(['role:wakil_dekan'])->prefix('wakil-dekan')->name('wakil_dekan.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'wdDashboard'])->name('dashboard');
 
         // Prestasi
@@ -165,13 +171,15 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
 
             Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedowm', 'takeDownPrestasi')->name('.takedown');
+            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown');
             Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
         });
     });
 
-    // Group Kajur
-    Route::middleware(['role:kajur'])->prefix('kepala-jurusan')->name('kajur.')->group(function () {
+    // -------------------------------------------------------------
+    // 4. Group Jurusan (Disesuaikan dari kajur menjadi jurusan)
+    // -------------------------------------------------------------
+    Route::middleware(['role:jurusan'])->prefix('jurusan')->name('jurusan.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'kajurDashboard'])->name('dashboard');
 
         // Prestasi
@@ -189,19 +197,8 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
 
             Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedowm', 'takeDownPrestasi')->name('.takedown');
+            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown');
             Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
-        });
-    });
-
-    // Group GPM / Dosen
-    Route::middleware(['role:gpm'])->prefix('panel')->name('gpm.')->group(function () {
-        Route::get('/dashboard', [PrestasiCOntroller::class, 'indexPrestasi'])->name('dashboard');
-
-        // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('prestasi')->group(function () {
-            Route::get('/{id}/detail', 'showPrestasi')->name('.show');
-            Route::get('/rekap', 'laporanRekap')->name('.rekap');
         });
     });
 });

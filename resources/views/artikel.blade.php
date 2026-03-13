@@ -8,9 +8,6 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
 
-            {{-- ========================================== --}}
-            {{-- LAYER KIRI (BERITA LENGKAP - 8 Kolom)      --}}
-            {{-- ========================================== --}}
             <div class="lg:col-span-8">
 
                 {{-- Breadcrumb --}}

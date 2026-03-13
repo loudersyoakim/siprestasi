@@ -8,6 +8,7 @@ use App\Models\Jurusan;
 use App\Models\Prodi;
 use App\Models\TingkatPrestasi;
 use App\Models\Prestasi;
+use App\Models\Konten;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
@@ -16,9 +17,9 @@ class LandingController extends Controller
 
     public function index()
     {
-        $allFeeds = \App\Models\Konten::where('is_published', true)
+        $allFeeds = Konten::where('is_published', true)
             ->latest()
-            ->take(7) // Ambil 7 untuk 1 Headline, 3 Samping, 3 Bawah
+            ->take(7)
             ->get();
 
         $headline = $allFeeds->first();
@@ -29,7 +30,7 @@ class LandingController extends Controller
 
     public function indexAll(Request $request)
     {
-        $query = \App\Models\Konten::where('is_published', true)->latest();
+        $query = Konten::where('is_published', true)->latest();
 
         // Logika Pencarian
         if ($request->has('search')) {
@@ -49,7 +50,7 @@ class LandingController extends Controller
     public function show($slug)
     {
         // Cari konten yang dipublish berdasarkan slug
-        $artikel = \App\Models\Konten::where('slug', $slug)
+        $artikel = Konten::where('slug', $slug)
             ->where('is_published', true)
             ->firstOrFail();
 

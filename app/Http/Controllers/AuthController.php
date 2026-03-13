@@ -10,7 +10,6 @@ use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
 {
-    // 1. TAMPILKAN HALAMAN LOGIN
     public function showLogin()
     {
         return view('auth.login');
@@ -29,7 +28,7 @@ class AuthController extends Controller
 
         if (!$user) {
             return back()->withErrors([
-                'email' => 'Akun dengan NIM/Email tersebut tidak ditemukan.',
+                'email' => 'Akun tidak ditemukan.',
             ])->onlyInput('email');
         }
 
