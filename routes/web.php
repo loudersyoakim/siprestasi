@@ -173,10 +173,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'mahasiswaDashboard'])->name('dashboard');
 
-        // Profil 
         Route::controller(ProfilController::class)->prefix('profil')->name('profil')->group(function () {
             Route::get('/', 'indexProfil');
-            Route::get('/edit', 'editProfil')->name('.edit');
             Route::post('/update', 'update')->name('.update');
             Route::put('/update-password', 'updatePassword')->name('.update-password');
         });

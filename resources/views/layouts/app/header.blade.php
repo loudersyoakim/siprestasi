@@ -30,14 +30,30 @@
         {{-- Profil --}}
         <div class="relative" x-data="{ openProfile: false }">
             <div class="flex items-center gap-3 cursor-pointer" id="profile-btn">
-                <div class="text-right hidden sm:block">
-                    <p class="text-xs font-bold text-gray-900 leading-none">{{ Auth::user()->name }}</p>
-                    <p class="text-[10px] text-gray-500 capitalize mt-0.5">{{ str_replace('_', ' ', Auth::user()->role) }}</p>
-                </div>
-                <div class="w-10 h-10 bg-green-50 text-[#006633] border border-green-100 rounded-full flex items-center justify-center font-bold text-lg shadow-sm transition-transform hover:scale-105">
-                    {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                </div>
-            </div>
+    <div class="text-right hidden sm:block">
+        <p class="text-xs font-bold text-gray-900 leading-none">{{ Auth::user()->name }}</p>
+        
+        {{-- TAMPILKAN NIM JIKA ADA, JIKA TIDAK TAMPILKAN ROLE --}}
+        <p class="text-[10px] text-gray-500 capitalize mt-0.5 font-semibold tracking-wide">
+            @if(Auth::user()->nim_nip)
+                {{ Auth::user()->nim_nip }}
+            @else
+                {{ str_replace('_', ' ', Auth::user()->role) }}
+            @endif
+        </p>
+    </div>
+    
+    {{-- TAMPILKAN FOTO PROFIL JIKA ADA, JIKA TIDAK TAMPILKAN INISIAL NAMA --}}
+    @if(Auth::user()->mahasiswa && Auth::user()->mahasiswa->foto_profil)
+        <img src="{{ asset('storage/' . Auth::user()->mahasiswa->foto_profil) }}" 
+             alt="Foto Profil" 
+             class="w-10 h-10 object-cover border border-green-100 rounded-full shadow-sm transition-transform hover:scale-105">
+    @else
+        <div class="w-10 h-10 bg-green-50 text-[#006633] border border-green-100 rounded-full flex items-center justify-center font-bold text-lg shadow-sm transition-transform hover:scale-105">
+            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+        </div>
+    @endif
+</div>
 
             {{-- Dropdown Profil --}}
             <div id="profile-dropdown" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50">
