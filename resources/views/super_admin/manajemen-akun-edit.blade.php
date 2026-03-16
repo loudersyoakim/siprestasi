@@ -1,9 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $routePrefix = Auth::user()->role === 'super_admin' ? 'super_admin' : 'admin';
+@endphp
+
 <div class="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <a href="{{ route('admin.manajemen-akun') }}" class="text-sm font-bold text-gray-400 hover:text-[#006633] transition-colors flex items-center gap-2">
+        <a href="{{ route($routePrefix . '.manajemen-akun') }}" class="text-sm font-bold text-gray-400 hover:text-[#006633] transition-colors flex items-center gap-2">
             <i class="bi bi-arrow-left"></i> Kembali ke Daftar
         </a>
         <h3 class="text-xl font-black text-gray-800 tracking-tight mt-2">Edit Akun: {{ $user->name }}</h3>
@@ -11,7 +15,7 @@
 </div>
 
 <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-    <form action="{{ route('admin.manajemen-akun.update', $user->id) }}" method="POST" class="p-6 sm:p-8 space-y-6">
+    <form action="{{ route($routePrefix . '.manajemen-akun.update', $user->id) }}" method="POST" class="p-6 sm:p-8 space-y-6">
         @csrf
         @method('PUT')
 
@@ -35,20 +39,28 @@
                 <select name="role" required class="w-full mt-1 px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:border-[#006633] focus:ring-1 focus:ring-[#006633] outline-none transition-all cursor-pointer">
                     <option value="mahasiswa" {{ old('role', $user->role) == 'mahasiswa' ? 'selected' : '' }}>Mahasiswa</option>
                     <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
-                    <option value="wd" {{ old('role', $user->role) == 'wd' ? 'selected' : '' }}>Wakil Dekan</option>
-                    <option value="kajur" {{ old('role', $user->role) == 'kajur' ? 'selected' : '' }}>Kepala Jurusan</option>
+                    <option value="wakil_dekan" {{ old('role', $user->role) == 'wakil_dekan' ? 'selected' : '' }}>Wakil Dekan</option>
+                    <option value="jurusan" {{ old('role', $user->role) == 'jurusan' ? 'selected' : '' }}>Kepala Jurusan</option>
                     <option value="gpm" {{ old('role', $user->role) == 'gpm' ? 'selected' : '' }}>GPM / Dosen</option>
                 </select>
             </div>
 
-            <div class="md:col-span-2">
+            <div>
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                    Email Akses</span>
+                    Email Akses
                 </label>
                 <input type="email" name="email" value="{{ old('email', $user->email) }}"
                     class="w-full mt-1 px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:border-[#006633] focus:ring-1 focus:ring-[#006633] outline-none transition-all @error('email') border-red-500 @enderror"
                     placeholder="Boleh dikosongkan...">
                 @error('email') <span class="text-red-500 text-[10px] font-bold mt-1 ml-1 uppercase">{{ $message }}</span> @enderror
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Status Aktivasi</label>
+                <select name="is_active" required class="w-full mt-1 px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:border-[#006633] focus:ring-1 focus:ring-[#006633] outline-none transition-all cursor-pointer {{ $user->is_active == 1 ? 'bg-green-50 text-green-800 border-green-200 font-bold' : 'bg-yellow-50 text-yellow-800 border-yellow-200 font-bold' }}">
+                    <option value="1" {{ old('is_active', $user->is_active) == '1' ? 'selected' : '' }}>Aktif</option>
+                    <option value="0" {{ old('is_active', $user->is_active) == '0' ? 'selected' : '' }}>Pending (Menunggu Aktivasi)</option>
+                </select>
             </div>
 
             <div class="md:col-span-2 mt-4">

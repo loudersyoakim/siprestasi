@@ -8,17 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('fakultas', function (Blueprint $table) {
+        Schema::create('capaian_prestasi', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_fakultas', 1)->unique();
-            $table->string('nama_fakultas');
-            $table->string('singkatan')->nullable();
+            $table->string('nama_capaian'); // Juara 1, Harapan, Medali Emas, dll
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('fakultas');
+        Schema::dropIfExists('capaian_prestasi');
     }
 };

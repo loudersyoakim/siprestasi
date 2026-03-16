@@ -1,7 +1,6 @@
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col min-h-screen border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:static md:flex-shrink-0 transition-transform duration-300 ease-in-out">
-    
-    {{-- Logo Area --}}
-    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col h-screen border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:sticky md:top-0 transition-transform duration-300 ease-in-out">    
+    {{-- Logo Area (Tetap di atas) --}}
+    <div class="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
         <div class="flex items-center gap-3">
             <img src="{{ asset('img/logo-unimed.png') }}" alt="Logo" class="h-10 w-auto">
             <h1 class="text-xl font-black tracking-tight text-gray-800 uppercase">SIAR<span class="text-[#006633]">PRESTASI</span></h1>
@@ -11,33 +10,104 @@
         </button>
     </div>
 
-    {{-- Navigasi Menu --}}
+    {{-- Navigasi Menu (Bisa di-scroll) --}}
     <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto custom-scrollbar">
-        <p class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-4 first:mt-0">Menu Utama</p>
+        
+        {{-- ========================================== --}}
+        {{-- MENU SUPER ADMIN --}}
+        {{-- ========================================== --}}
+        @if(Auth::user()->role == 'super_admin')
+        
+        <a href="{{ route('super_admin.dashboard') }}"
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('super_admin.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            <i class="bi bi-grid-1x2-fill text-lg {{ request()->routeIs('super_admin.dashboard') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+            <span class="text-sm">Dashboard</span>
+        </a>
 
+        <a href="{{ route('super_admin.manajemen-akun') }}"
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('super_admin.manajemen-akun') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            <i class="bi bi-people-fill text-lg {{ request()->routeIs('super_admin.manajemen-akun') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+            <span class="text-sm">Manajemen Akun</span>
+        </a>
+        <a href="{{ route('super_admin.daftar-mahasiswa') }}"
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                {{ request()->routeIs('*.daftar-mahasiswa') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            <i class="bi bi-mortarboard-fill text-lg {{ request()->routeIs('*.daftar-mahasiswa') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+            <span class="text-sm">Daftar Mahasiswa</span>
+        </a>
+
+        {{-- DROPDOWN PRESTASI SUPER ADMIN --}}
+        <div class="relative">
+            <button id="btn-prestasi"
+                class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
+                       {{ request()->is('super-admin/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-trophy-fill text-lg {{ request()->is('super-admin/prestasi*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                    <span class="text-sm">Kelola Prestasi</span>
+                </div>
+                <i id="icon-chevron-prestasi" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('super-admin/prestasi*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+            </button>
+
+            <div id="menu-prestasi" class="{{ request()->is('super-admin/prestasi*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Tambah Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Daftar Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Validasi Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Laporan & Rekap</span></a>
+            </div>
+        </div>
+
+        <a href="#" 
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium">
+            <i class="bi bi-newspaper text-lg text-gray-400 group-hover:text-[#006633]"></i>
+            <span class="text-sm">Manajemen Konten</span>
+        </a>
+
+        {{-- DROPDOWN MASTER DATA SUPER ADMIN --}}
+        <div class="relative">
+            <button id="btn-master"
+                class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
+                       {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-database-fill-gear text-lg {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                    <span class="text-sm">Master Data</span>
+                </div>
+                <i id="icon-chevron-master" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+            </button>
+
+            <div id="menu-master" class="{{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Surat & Tahun Akademik</a>
+                <a href="{{ route('super_admin.struktur-akademik') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('super_admin.struktur-akademik*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Struktur Akademik</a>
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Atribut Prestasi</a>
+            </div>
+        </div>
+        @endif
+
+        {{-- ========================================== --}}
+        {{-- MENU ADMIN --}}
+        {{-- ========================================== --}}
         @if(Auth::user()->role == 'admin')
-        {{-- DASHBOARD ADMIN --}}
+        
         <a href="{{ route('admin.dashboard') }}"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group
-                  {{ request()->routeIs('admin.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('admin.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-grid-1x2-fill text-lg {{ request()->routeIs('admin.dashboard') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Beranda Dashboard</span>
         </a>
 
         <a href="{{ route('admin.manajemen-akun') }}"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group
-                  {{ request()->routeIs('admin.manajemen-akun') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('admin.manajemen-akun') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-people-fill text-lg {{ request()->routeIs('admin.manajemen-akun') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Manajemen Akun</span>
         </a>
 
-        <p class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-6">Manajemen Data</p>
-
-        {{-- DROPDOWN PRESTASI --}}
+        {{-- DROPDOWN PRESTASI ADMIN --}}
         <div class="relative">
             <button id="btn-prestasi"
-                class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none
-                       {{ request()->is('admin/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
+                       {{ request()->is('admin/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
                 <div class="flex items-center gap-3">
                     <i class="bi bi-trophy-fill text-lg {{ request()->is('admin/prestasi*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
                     <span class="text-sm">Kelola Prestasi</span>
@@ -46,63 +116,66 @@
             </button>
 
             <div id="menu-prestasi" class="{{ request()->is('admin/prestasi*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
-                <a href="{{ route('admin.prestasi.create') }}" class="group flex items-center justify-between py-2 text-sm transition-colors {{ request()->routeIs('admin.prestasi.create') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}"><span>Tambah Prestasi</span></a>
-                <a href="{{ route('admin.prestasi') }}" class="group flex items-center justify-between py-2 text-sm transition-colors {{ request()->routeIs('admin.prestasi') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}"><span>Daftar Prestasi</span></a>
-                <a href="{{ route('admin.prestasi.validasi') }}" class="group flex items-center justify-between py-2 text-sm transition-colors {{ request()->routeIs('admin.prestasi.validasi') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">
-                    <span>Validasi Prestasi</span>
-                    @php $pendingCount = \App\Models\Prestasi::where('status', 'pending')->count(); @endphp
-                    @if($pendingCount > 0)
-                        <span class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">{{ $pendingCount }}</span>
-                    @endif
-                </a>
-                <a href="{{ route('admin.prestasi.laporan-rekap') }}" class="group flex items-center justify-between py-2 text-sm transition-colors {{ request()->routeIs('admin.prestasi.laporan-rekap') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}"><span>Laporan & Rekap</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Tambah Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Daftar Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Validasi Prestasi</span></a>
+                <a href="#" class="group flex items-center justify-between py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]"><span>Laporan & Rekap</span></a>
             </div>
         </div>
 
-        <a href="{{ route('admin.manajemen-konten') }}" 
-            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium">
+        <a href="#" 
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium">
             <i class="bi bi-newspaper text-lg text-gray-400 group-hover:text-[#006633]"></i>
             <span class="text-sm">Manajemen Konten</span>
         </a>
 
-        {{-- DROPDOWN MASTER DATA --}}
+        {{-- DROPDOWN MASTER DATA ADMIN --}}
         <div class="relative">
             <button id="btn-master"
-                class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none
-                       {{ request()->is('admin/master-data*') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
+                       {{ request()->is('admin/master-data*') || request()->is('admin/struktur-akademik*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
                 <div class="flex items-center gap-3">
-                    <i class="bi bi-database-fill-gear text-lg {{ request()->is('admin/master-data*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                    <i class="bi bi-database-fill-gear text-lg {{ request()->is('admin/master-data*') || request()->is('admin/struktur-akademik*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
                     <span class="text-sm">Master Data</span>
                 </div>
-                <i id="icon-chevron-master" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('admin/master-data*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                <i id="icon-chevron-master" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('admin/master-data*') || request()->is('admin/struktur-akademik*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             </button>
 
-            <div id="menu-master" class="{{ request()->is('admin/master-data*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
-                <a href="{{ route('admin.master-data.sta') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.master-data.sta') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Surat & Tahun Akademik</a>
-                <a href="{{ route('admin.master-data.fakultas') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.master-data.fakultas*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Fakultas</a>
-                <a href="{{ route('admin.master-data.jurusan') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.master-data.jurusan*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Jurusan</a>
-                <a href="{{ route('admin.master-data.prodi') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.master-data.prodi*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Program Studi</a>
-                <a href="{{ route('admin.master-data.atribut-prestasi') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.master-data.atribut-prestasi*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Atribut Prestasi</a>
+            <div id="menu-master" class="{{ request()->is('admin/master-data*') || request()->is('admin/struktur-akademik*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Surat & Tahun Akademik</a>
+                <a href="{{ route('admin.struktur-akademik') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('admin.struktur-akademik*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Struktur Akademik</a>
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Atribut Prestasi</a>
             </div>
         </div>
         @endif
 
+        {{-- ========================================== --}}
         {{-- MENU MAHASISWA --}}
+        {{-- ========================================== --}}
         @if(Auth::user()->role == 'mahasiswa')
-        <a href="{{ route('mahasiswa.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group {{ request()->routeIs('mahasiswa.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+        
+        <a href="{{ route('mahasiswa.dashboard') }}" 
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('mahasiswa.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-grid-1x2-fill text-lg {{ request()->routeIs('mahasiswa.dashboard') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Beranda Dashboard</span>
         </a>
 
-        <a href="{{ route('mahasiswa.profil') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group {{ request()->routeIs('mahasiswa.profil') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+        <a href="{{ route('mahasiswa.profil') }}" 
+            class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
+                  {{ request()->routeIs('mahasiswa.profil') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-person-badge-fill text-lg {{ request()->routeIs('mahasiswa.profil') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Profil Saya</span>
         </a>
 
-        @php $isProfileComplete = Auth::user()->mahasiswa()->exists(); @endphp
+        {{-- Logika Placeholder Mahasiswa (Disesuaikan dengan kondisimu) --}}
+        @php $isProfileComplete = true; /* Ganti kembali dengan cek profile aslimu */ @endphp
+        
         @if($isProfileComplete)
         <div class="relative">
-            <button id="btn-prestasi-mhs" class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none {{ request()->is('mahasiswa/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+            <button id="btn-prestasi-mhs" 
+                class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
+                       {{ request()->is('mahasiswa/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
                 <div class="flex items-center gap-3">
                     <i class="bi bi-trophy-fill text-lg {{ request()->is('mahasiswa/prestasi*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
                     <span class="text-sm">Prestasi Saya</span>
@@ -110,8 +183,8 @@
                 <i id="icon-chevron-prestasi-mhs" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('mahasiswa/prestasi*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             </button>
             <div id="menu-prestasi-mhs" class="{{ request()->is('mahasiswa/prestasi*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden">
-                <a href="{{ route('mahasiswa.prestasi.create') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('mahasiswa.prestasi.create') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Tambah Prestasi</a>
-                <a href="{{ route('mahasiswa.prestasi') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('mahasiswa.prestasi') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Daftar Prestasi</a>
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Tambah Prestasi</a>
+                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Daftar Prestasi</a>
             </div>
         </div>
         @else
@@ -126,14 +199,50 @@
         @endif
     </nav>
 
-    {{-- Tombol Logout --}}
-    <div class="p-4 bg-gray-50 border-t border-gray-200">
+    {{-- Tombol Logout (Tetap di bawah) --}}
+    <div class="p-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
         <form action="{{ route('logout') }}" method="POST">
             @csrf
             <button type="submit" class="flex items-center justify-center w-full gap-2 px-4 py-3 font-bold text-red-600 transition-all bg-white border border-red-100 shadow-sm hover:bg-red-50 rounded-xl group">
                 <i class="bi bi-box-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
-                <span class="text-sm">Keluar Sistem</span>
+                <span class="text-sm">Keluar</span>
             </button>
         </form>
     </div>
 </aside>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fungsi untuk mengatur klik dropdown
+        function setupDropdown(btnId, menuId, iconId) {
+            const btn = document.getElementById(btnId);
+            const menu = document.getElementById(menuId);
+            const icon = document.getElementById(iconId);
+
+            if (btn && menu && icon) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    // Toggle menu (tampilkan / sembunyikan)
+                    if (menu.classList.contains('hidden')) {
+                        menu.classList.remove('hidden');
+                        menu.classList.add('block');
+                        icon.classList.add('rotate-180', 'text-[#006633]');
+                        icon.classList.remove('text-gray-400');
+                    } else {
+                        menu.classList.add('hidden');
+                        menu.classList.remove('block');
+                        icon.classList.remove('rotate-180', 'text-[#006633]');
+                        icon.classList.add('text-gray-400');
+                    }
+                });
+            }
+        }
+
+        // Inisialisasi tombol dropdown untuk Admin/Super Admin
+        setupDropdown('btn-prestasi', 'menu-prestasi', 'icon-chevron-prestasi');
+        setupDropdown('btn-master', 'menu-master', 'icon-chevron-master');
+        
+        // Inisialisasi tombol dropdown untuk Mahasiswa
+        setupDropdown('btn-prestasi-mhs', 'menu-prestasi-mhs', 'icon-chevron-prestasi-mhs');
+    });
+</script>

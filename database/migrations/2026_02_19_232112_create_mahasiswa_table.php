@@ -13,17 +13,15 @@ return new class extends Migration
     {
         Schema::create('mahasiswa', function (Blueprint $table) {
             $table->id();
-            // Menghubungkan ke tabel users
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
 
-            $table->string('nim')->unique();
-            $table->enum('jenis_kelamin', ['Laki-laki', 'Perempuan']);
-            $table->year('angkatan');
+            $table->string('foto_profil')->nullable();
+            $table->enum('jenis_kelamin', ['Laki-laki', 'Perempuan'])->nullable();
+            $table->year('angkatan')->nullable();
 
-            // Relasi ke struktur kampus yang sudah Abang buat
-            $table->foreignId('prodi_id')->constrained('prodi');
-            $table->foreignId('jurusan_id')->constrained('jurusan');
-            $table->foreignId('fakultas_id')->constrained('fakultas');
+            $table->foreignId('fakultas_id')->nullable()->constrained('fakultas')->nullOnDelete();
+            $table->foreignId('jurusan_id')->nullable()->constrained('jurusan')->nullOnDelete();
+            $table->foreignId('prodi_id')->nullable()->constrained('prodi')->nullOnDelete();
 
             $table->timestamps();
         });

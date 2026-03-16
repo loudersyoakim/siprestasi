@@ -9,7 +9,7 @@
 
             <div class="flex flex-col items-center text-center mb-8">
                 <h1 class="text-xl font-black text-gray-900 tracking-tight uppercase">
-                    SIAR<span class="text-[#006633]">PRESTASI</span>
+                    SI<span class="text-[#006633]">PRESTASI</span>
                 </h1>
                 <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-widest">REGITRASI AKUN</p>
             </div>

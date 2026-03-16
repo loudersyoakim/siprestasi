@@ -9,6 +9,9 @@ use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfilController;
+use App\Http\Controllers\DaftarMahasiswaController;
+use App\Http\Controllers\StrukturAkademikController;
+
 
 // =================================================================
 // RUTE PUBLIK & LANDING PAGE
@@ -37,15 +40,13 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth'])->group(function () {
 
     // -------------------------------------------------------------
-    // 1. Group Admin & Super Admin (Digabung agar sama-sama bisa kelola data)
+    // 1. Group Admin  dan super admin
     // -------------------------------------------------------------
-    Route::middleware(['role:admin,super_admin'])->prefix('admin')->group(function () {
-
-        Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
-        Route::get('/super-admin/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('super_admin.dashboard');
+    Route::middleware(['role:super_admin'])->prefix('super-admin')->name('super_admin')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('.dashboard');
 
         // Manajemen Akun 
-        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('admin.manajemen-akun')->group(function () {
+        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('.manajemen-akun')->group(function () {
             Route::get('/', 'indexManajemenAkun');
             Route::get('/create', 'createAkun')->name('.create');
             Route::post('/', 'storeAkun')->name('.store');
@@ -54,10 +55,52 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{id}', 'destroyAkun')->name('.destroy');
             Route::post('/import', 'importAkun')->name('.import');
             Route::get('/export-template', 'exportFormatAkun')->name('.export-format');
+
+            Route::post('/bulk', 'bulkAction')->name('.bulk');
+            Route::patch('/{id}/aktivasi', 'aktivasiAkun')->name('.aktivasi');
+        });
+
+        Route::controller(StrukturAkademikController::class)->prefix('struktur-akademik')->name('.struktur-akademik')->group(function () {
+            Route::get('/', 'indexStrukturAkademik');
+            Route::post('/fakultas', 'storeFakultas')->name('.fakultas.store');
+            Route::put('/fakultas/{id}', 'updateFakultas')->name('.fakultas.update');
+            Route::delete('/fakultas/{id}', 'destroyFakultas')->name('.fakultas.destroy');
+
+            Route::post('/jurusan', 'storeJurusan')->name('.jurusan.store');
+            Route::put('/jurusan/{id}', 'updateJurusan')->name('.jurusan.update');
+            Route::delete('/jurusan/{id}', 'destroyJurusan')->name('.jurusan.destroy');
+
+            Route::post('/prodi', 'storeProdi')->name('.prodi.store');
+            Route::put('/prodi/{id}', 'updateProdi')->name('.prodi.update');
+            Route::delete('/prodi/{id}', 'destroyProdi')->name('.prodi.destroy');
+        });
+
+        Route::controller(DaftarMahasiswaController::class)->prefix('daftar-mahasiswa')->name('.daftar-mahasiswa')->group(function () {
+            Route::get('/daftar-mahasiswa', 'indexDaftarMahasiswa');
+            Route::delete('/daftar-mahasiswa/{id}', 'destroy')->name('.destroy');
+        });
+    });
+
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('.dashboard');
+
+
+        // Manajemen Akun 
+        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('.manajemen-akun')->group(function () {
+            Route::get('/', 'indexManajemenAkun');
+            Route::get('/create', 'createAkun')->name('.create');
+            Route::post('/', 'storeAkun')->name('.store');
+            Route::get('/{id}/edit', 'editAkun')->name('.edit');
+            Route::put('/{id}', 'updateAkun')->name('.update');
+            Route::delete('/{id}', 'destroyAkun')->name('.destroy');
+            Route::post('/import', 'importAkun')->name('.import');
+            Route::get('/export-template', 'exportFormatAkun')->name('.export-format');
+
+            Route::post('/bulk', 'bulkAction')->name('super_admin.manajemen-akun.bulk');
         });
 
         // Manajemen Konten
-        Route::controller(ManajemenKontenController::class)->prefix('manajemen-konten')->name('admin.manajemen-konten')->group(function () {
+        Route::controller(ManajemenKontenController::class)->prefix('manajemen-konten')->name('.manajemen-konten')->group(function () {
             Route::get('/', 'indexManajemenKonten');
             Route::get('/create', 'createKonten')->name('.create');
             Route::post('/', 'storeKonten')->name('.store');
@@ -67,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('admin.prestasi')->group(function () {
+        Route::controller(PrestasiController::class)->prefix('prestasi')->name('.prestasi')->group(function () {
             Route::get('/', 'indexPrestasi');
             Route::get('/create', 'createPrestasi')->name('.create');
             Route::post('/', 'storePrestasi')->name('.store');
@@ -86,7 +129,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Master Data 
-        Route::controller(MasterDataController::class)->prefix('master-data')->name('admin.master-data')->group(function () {
+        Route::controller(MasterDataController::class)->prefix('master-data')->name('.master-data')->group(function () {
             Route::get('/', 'indexMasterData');
 
             // Fakultas, Jurusan, Prodi

@@ -23,9 +23,9 @@
         </div> --}}
 
         {{-- Bantuan --}}
-        <button onclick="toggleHelpModal()" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 rounded-full transition-all" title="Bantuan">
+        {{-- <button onclick="toggleHelpModal()" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 rounded-full transition-all" title="Bantuan">
             <i class="bi bi-question-circle text-xl"></i>
-        </button>
+        </button> --}}
 
         {{-- Profil --}}
         <div class="relative" x-data="{ openProfile: false }">
@@ -48,7 +48,7 @@
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf
                     <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 font-bold hover:bg-red-50 flex items-center gap-2 transition-colors">
-                        <i class="bi bi-box-arrow-right"></i> Keluar Sistem
+                        <i class="bi bi-box-arrow-right"></i> Keluar
                     </button>
                 </form>
             </div>

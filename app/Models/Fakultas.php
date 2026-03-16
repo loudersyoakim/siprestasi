@@ -11,7 +11,7 @@ class Fakultas extends Model
 
     protected $table = 'fakultas';
     // protected $table = 'jurusan';
-    protected $fillable = ['nama_fakultas'];
+    protected $fillable = ['nama_fakultas', 'kode_fakultas', 'singkatan',];
 
     public function jurusan()
     {

@@ -10,9 +10,6 @@ class DashboardController extends Controller
 
     public function adminDashboard()
     {
-        if (auth()->user()->role === 'super_admin') {
-            return $this->superAdminDashboard();
-        }
 
         $data = [
             'total_mahasiswa' => User::where('role', 'mahasiswa')->count(),
@@ -24,11 +21,10 @@ class DashboardController extends Controller
     public function superAdminDashboard()
     {
         $data = [
-            'total_admin' => User::where('role', 'admin')->count(),
-            'total_semua_user' => User::count(),
+            'total_mahasiswa' => User::where('role', 'mahasiswa')->count(),
         ];
 
-        return view('admin.super-dashboard', $data);
+        return view('super_admin.dashboard', $data);
     }
 
     public function wdDashboard()

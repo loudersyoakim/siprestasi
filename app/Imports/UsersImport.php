@@ -17,11 +17,12 @@ class UsersImport implements ToModel, WithBatchInserts, WithChunkReading, Should
         if (!isset($row[0])) return null;
 
         return new User([
-            'name'     => $row[0],
-            'nim_nip'  => $row[1],
-            'email'    => $row[2],
-            'role'     => $row[3] ?? 'mahasiswa',
-            'password' => Hash::make($row[1]), // Password default pakai NIM/NIP
+            'name'     => $row['nama'],
+            'nim_nip'  => $row['nim_nip'],
+            'email'    => $row['email'],
+            'role'     => $row['role'],
+            'password' => Hash::make($row['password'] ?? $row['nim_nip']),
+            'is_active' => 1,
         ]);
     }
 

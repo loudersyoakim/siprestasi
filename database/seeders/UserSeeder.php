@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB; // Tambahkan ini
 
 class UserSeeder extends Seeder
 {
@@ -13,6 +14,18 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // 1. Mengisi Tabel Pengaturan Sistem
+        DB::table('pengaturan_sistem')->insert([
+            [
+                'kunci' => 'wajib_aktivasi_mahasiswa',
+                'nilai' => '1', // 1 berarti Ya (Wajib), 0 berarti Tidak
+                'deskripsi' => 'Jika diaktifkan (1), setiap mahasiswa yang mendaftar harus diaktivasi manual oleh Admin sebelum bisa login.',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        ]);
+
+        // 2. Mengisi Tabel Users
         $users = [
             [
                 'name'     => 'Super Administrator',
@@ -20,6 +33,7 @@ class UserSeeder extends Seeder
                 'email'    => 'superadmin@unimed.ac.id',
                 'role'     => 'super_admin',
                 'password' => Hash::make('password'),
+                'is_active' => true,
             ],
             [
                 'name'     => 'Admin Universitas',
@@ -27,6 +41,7 @@ class UserSeeder extends Seeder
                 'email'    => 'admin@unimed.ac.id',
                 'role'     => 'admin',
                 'password' => Hash::make('password'),
+                'is_active' => true,
             ],
             [
                 'name'     => 'Wakil Dekan',
@@ -34,6 +49,7 @@ class UserSeeder extends Seeder
                 'email'    => 'wakildekan@unimed.ac.id',
                 'role'     => 'wakil_dekan',
                 'password' => Hash::make('password'),
+                'is_active' => true,
             ],
             [
                 'name'     => 'Kepala Jurusan',
@@ -41,6 +57,7 @@ class UserSeeder extends Seeder
                 'email'    => 'jurusan@unimed.ac.id',
                 'role'     => 'jurusan',
                 'password' => Hash::make('password'),
+                'is_active' => true,
             ],
             [
                 'name'     => 'Mahasiswa Berprestasi',
@@ -48,6 +65,7 @@ class UserSeeder extends Seeder
                 'email'    => 'mahasiswa@unimed.ac.id',
                 'role'     => 'mahasiswa',
                 'password' => Hash::make('password'),
+                'is_active' => true,
             ],
         ];
 

@@ -13,6 +13,13 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ManajemenAkunController extends Controller
 {
+    /**
+     * Mendapatkan prefix route/view berdasarkan role aktif
+     */
+    private function getRolePrefix()
+    {
+        return Auth::user()->role === 'super_admin' ? 'super_admin' : 'admin';
+    }
 
     /**
      * Daftar Akun (Index) dengan Search, Filter, dan Sort
@@ -25,6 +32,17 @@ class ManajemenAkunController extends Controller
         if (Auth::user()->role !== 'super_admin') {
             $query->where('role', '!=', 'super_admin');
         }
+
+        // Jika tab 'pending' dipilih, tampilkan is_active = 0. Selain itu tampilkan is_active = 1
+        $statusTab = $request->input('tab', 'aktif');
+        if ($statusTab === 'pending') {
+            $query->where('is_active', 0);
+        } else {
+            $query->where('is_active', 1);
+        }
+
+        // Hitung jumlah akun yang menunggu aktivasi untuk Badge Notifikasi
+        $pendingCount = User::where('is_active', 0)->count();
 
         // 1. Search Global
         if ($request->filled('search')) {
@@ -75,12 +93,16 @@ class ManajemenAkunController extends Controller
         }
 
         $users = $query->paginate(10)->withQueryString();
-        return view('admin.manajemen-akun', compact('users'));
+
+        // Dinamis arahkan ke folder/view berdasarkan role
+        $prefix = $this->getRolePrefix();
+        return view("{$prefix}.manajemen-akun", compact('users', 'statusTab', 'pendingCount'));
     }
 
     public function createAkun()
     {
-        return view('admin.manajemen-akun-create');
+        $prefix = $this->getRolePrefix();
+        return view("{$prefix}.manajemen-akun-create");
     }
 
     public function storeAkun(Request $request)
@@ -91,7 +113,10 @@ class ManajemenAkunController extends Controller
             'email' => 'nullable|email|unique:users',
             'role' => 'required|string',
             'password' => 'nullable|min:8|confirmed',
+            'is_active' => 'required|boolean', // <-- Validasi Baru
         ]);
+
+        $prefix = $this->getRolePrefix();
 
         // --- PROTEKSI 2: Admin tidak boleh membuat role Super Admin ---
         if (Auth::user()->role !== 'super_admin' && $request->role === 'super_admin') {
@@ -108,30 +133,33 @@ class ManajemenAkunController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'password' => $passwordFinal,
+            'is_active' => $request->is_active, // <-- Simpan ke database
         ]);
 
-        return redirect()->route('admin.manajemen-akun')->with('success', 'Akun berhasil ditambahkan!');
+        return redirect()->route("{$prefix}.manajemen-akun")->with('success', 'Akun berhasil ditambahkan!');
     }
 
     public function editAkun($id)
     {
         $user = User::findOrFail($id);
+        $prefix = $this->getRolePrefix();
 
         // --- PROTEKSI 3: Blokir Admin yang mencoba edit Super Admin lewat URL ---
         if (Auth::user()->role !== 'super_admin' && $user->role === 'super_admin') {
-            return redirect()->route('admin.manajemen-akun')->with('error', 'Akses Ditolak! Anda tidak bisa mengedit Super Admin.');
+            return redirect()->route("{$prefix}.manajemen-akun")->with('error', 'Akses Ditolak! Anda tidak bisa mengedit Super Admin.');
         }
 
-        return view('admin.manajemen-akun-edit', compact('user'));
+        return view("{$prefix}.manajemen-akun-edit", compact('user'));
     }
 
     public function updateAkun(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $prefix = $this->getRolePrefix();
 
         // --- PROTEKSI 4: Mencegah update ke role Super Admin jika yang mengedit Admin biasa ---
         if (Auth::user()->role !== 'super_admin' && ($user->role === 'super_admin' || $request->role === 'super_admin')) {
-            return redirect()->route('admin.manajemen-akun')->with('error', 'Izin Ditolak!');
+            return redirect()->route("{$prefix}.manajemen-akun")->with('error', 'Izin Ditolak!');
         }
 
         $request->validate([
@@ -140,12 +168,14 @@ class ManajemenAkunController extends Controller
             'nim_nip' => 'required|string|unique:users,nim_nip,' . $id,
             'role'    => 'required|string',
             'password' => 'nullable|string|min:8',
+            'is_active' => 'required|boolean', // <-- Validasi Baru
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
         $user->nim_nip = $request->nim_nip;
         $user->role = $request->role;
+        $user->is_active = $request->is_active; // <-- Update ke database
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
@@ -153,7 +183,7 @@ class ManajemenAkunController extends Controller
 
         $user->save();
 
-        return redirect()->route('admin.manajemen-akun')->with('success', 'Akun berhasil diperbarui!');
+        return redirect()->route("{$prefix}.manajemen-akun")->with('success', 'Akun berhasil diperbarui!');
     }
 
     public function destroyAkun($id)
@@ -193,8 +223,42 @@ class ManajemenAkunController extends Controller
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
     public function exportFormatAkun()
     {
         return Excel::download(new TemplateAkunExport, 'template_akun.xlsx');
+    }
+
+    public function aktivasiAkun($id)
+    {
+        $user = User::findOrFail($id);
+        $user->is_active = 1;
+        $user->save();
+
+        return back()->with('success', 'Akun ' . $user->name . ' berhasil diaktivasi!');
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'bulk_action' => 'required|in:activate,delete'
+        ]);
+
+        $ids = $request->ids;
+
+        if ($request->bulk_action === 'activate') {
+            User::whereIn('id', $ids)->update(['is_active' => 1]);
+            return back()->with('success', count($ids) . ' akun berhasil diaktivasi!');
+        }
+
+        if ($request->bulk_action === 'delete') {
+            // Beri proteksi agar tidak bisa menghapus diri sendiri atau super_admin
+            User::whereIn('id', $ids)
+                ->where('id', '!=', Auth::id())
+                ->where('role', '!=', 'super_admin')
+                ->delete();
+            return back()->with('success', count($ids) . ' akun berhasil dihapus!');
+        }
     }
 }

@@ -19,7 +19,17 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('role')->default('mahasiswa');
             $table->string('password');
+            $table->boolean('is_active')->default(false);
+
             $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('pengaturan_sistem', function (Blueprint $table) {
+            $table->id();
+            $table->string('kunci')->unique();
+            $table->string('nilai');
+            $table->string('deskripsi')->nullable();
             $table->timestamps();
         });
 
@@ -44,6 +54,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('pengaturan_sistem');
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
