@@ -11,6 +11,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\DaftarMahasiswaController;
 use App\Http\Controllers\StrukturAkademikController;
+use App\Http\Controllers\ManajemenFormController;
 
 
 // =================================================================
@@ -80,6 +81,17 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{id}/edit', 'edit')->name('.edit');
             Route::put('/{id}', 'update')->name('.update');
             Route::delete('/{id}', 'destroy')->name('.destroy');
+        });
+
+        Route::controller(ManajemenFormController::class)->prefix('manajemen-form')->name('.manajemen-form')->group(function () {
+            Route::get('/', 'indexManajemenForm');
+            Route::post('/', 'store')->name('.store');
+            Route::get('/{id}/edit', 'edit')->name('.edit');
+            Route::put('/{id}', 'update')->name('.update');
+            Route::delete('/{id}', 'destroy')->name('.destroy');
+
+            // Route tambahan untuk mengatur pertanyaan di dalam form
+            Route::get('/{id}/atur', 'show')->name('.show');
         });
     });
 

@@ -8,8 +8,8 @@
 
 <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
-        <p class="text-sm text-gray-500 mt-1">Kelola data pengguna dan hak akses sistem.</p>
+
+        <h3 class="text-xl font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
     </div>
 
     <a href="{{ route($routePrefix . '.manajemen-akun.create') }}" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-[#004d26] transition-colors shadow-sm">

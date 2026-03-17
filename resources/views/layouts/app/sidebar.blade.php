@@ -17,20 +17,23 @@
         {{-- MENU SUPER ADMIN --}}
         {{-- ========================================== --}}
         @if(Auth::user()->role == 'super_admin')
-        
+        {{-- DASHBOARD --}}
         <a href="{{ route('super_admin.dashboard') }}"
             class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
-                  {{ request()->routeIs('super_admin.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                {{ request()->routeIs('super_admin.dashboard') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-grid-1x2-fill text-lg {{ request()->routeIs('super_admin.dashboard') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Dashboard</span>
         </a>
 
+        {{-- MANAJEMEN AKUN --}}
         <a href="{{ route('super_admin.manajemen-akun') }}"
             class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
-                  {{ request()->routeIs('super_admin.manajemen-akun') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                {{ request()->routeIs('super_admin.manajemen-akun') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
             <i class="bi bi-people-fill text-lg {{ request()->routeIs('super_admin.manajemen-akun') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             <span class="text-sm">Manajemen Akun</span>
         </a>
+
+        {{-- DAFTAR MAHASISWA --}}
         <a href="{{ route('super_admin.daftar-mahasiswa') }}"
             class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden
                 {{ request()->routeIs('*.daftar-mahasiswa') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
@@ -42,7 +45,7 @@
         <div class="relative">
             <button id="btn-prestasi"
                 class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
-                       {{ request()->is('super-admin/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                    {{ request()->is('super-admin/prestasi*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
                 <div class="flex items-center gap-3">
                     <i class="bi bi-trophy-fill text-lg {{ request()->is('super-admin/prestasi*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
                     <span class="text-sm">Kelola Prestasi</span>
@@ -58,31 +61,40 @@
             </div>
         </div>
 
+        {{-- MANAJEMEN KONTEN --}}
         <a href="#" 
             class="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all group overflow-hidden text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium">
             <i class="bi bi-newspaper text-lg text-gray-400 group-hover:text-[#006633]"></i>
             <span class="text-sm">Manajemen Konten</span>
         </a>
 
-        {{-- DROPDOWN MASTER DATA SUPER ADMIN --}}
+        {{-- DROPDOWN MASTER DATA --}}
         <div class="relative">
             <button id="btn-master"
                 class="relative flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all group focus:outline-none overflow-hidden
-                       {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
+                    {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') || request()->is('super-admin/manajemen-form*') ? 'bg-[#006633]/10 text-[#006633] font-bold before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[#006633]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#006633] font-medium' }}">
                 <div class="flex items-center gap-3">
-                    <i class="bi bi-database-fill-gear text-lg {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                    <i class="bi bi-database-fill-gear text-lg {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') || request()->is('super-admin/manajemen-form*') ? 'text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
                     <span class="text-sm">Master Data</span>
                 </div>
-                <i id="icon-chevron-master" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
+                <i id="icon-chevron-master" class="bi bi-chevron-down text-xs transition-transform duration-300 {{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') || request()->is('super-admin/manajemen-form*') ? 'rotate-180 text-[#006633]' : 'text-gray-400 group-hover:text-[#006633]' }}"></i>
             </button>
 
-            <div id="menu-master" class="{{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
+            <div id="menu-master" class="{{ request()->is('super-admin/master-data*') || request()->is('super-admin/struktur-akademik*') || request()->is('super-admin/manajemen-form*') ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-200 pl-4 overflow-hidden transition-all duration-300">
                 <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Surat & Tahun Akademik</a>
-                <a href="{{ route('super_admin.struktur-akademik') }}" class="block py-2 text-sm transition-colors {{ request()->routeIs('super_admin.struktur-akademik*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">Struktur Akademik</a>
-                <a href="#" class="block py-2 text-sm transition-colors text-gray-500 hover:text-[#006633]">Atribut Prestasi</a>
+                
+                <a href="{{ route('super_admin.struktur-akademik') }}" 
+                class="block py-2 text-sm transition-colors {{ request()->routeIs('super_admin.struktur-akademik*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">
+                Struktur Akademik
+                </a>
+                
+                <a href="{{ route('super_admin.manajemen-form') }}" 
+                class="block py-2 text-sm transition-colors {{ request()->routeIs('super-admin/manajemen-form*') ? 'text-[#006633] font-bold' : 'text-gray-500 hover:text-[#006633]' }}">
+                Manajemen Form Prestasi
+                </a>
             </div>
         </div>
-        @endif
+    @endif
 
         {{-- ========================================== --}}
         {{-- MENU ADMIN --}}
