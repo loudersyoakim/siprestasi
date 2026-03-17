@@ -84,7 +84,7 @@
                         NIM
                     </th>
                     <th class="px-3 py-2 text-center text-gray-400 text-[10px] uppercase font-bold tracking-wider align-middle whitespace-nowrap">
-                        Angkt
+                        Angkatan
                     </th>
                     <th class="px-3 py-2 text-gray-400 text-[10px] uppercase font-bold tracking-wider align-middle whitespace-nowrap">
                         Jurusan
@@ -106,19 +106,19 @@
                         {{ (method_exists($mahasiswa, 'firstItem') ? $mahasiswa->firstItem() : 1) + $loop->index }}
                     </td>
 
-                    {{-- Kolom Profil & Kontak --}}
+                    {{-- Kolom Profil --}}
                     <td class="px-3 py-2.5 align-middle">
                         <div class="flex items-center gap-2.5">
                             @if($item->mahasiswa && $item->mahasiswa->foto_profil)
                                 <img src="{{ asset('storage/' . $item->mahasiswa->foto_profil) }}" alt="Foto" class="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200 transition-transform group-hover:scale-105 shrink-0">
                             @else
-                                <div class="w-9 h-9 rounded-full bg-green-50 text-[#006633] border border-green-100 flex items-center justify-center font-bold shadow-sm transition-transform group-hover:scale-105 text-sm shrink-0">
+                                <div class="w-9 h-9 rounded-full bg-green-50 text-[#006633] border border-green-100 flex items-center justify-center font-bold shadow-sm transition-transform group-hover:scale-15 text-sm shrink-0">
                                     {{ strtoupper(substr($item->name, 0, 1)) }}
                                 </div>
                             @endif
 
                             {{-- BUNGKUS SCROLLABLE PASTIKAN PAKAI PIXEL --}}
-                            <div class="max-w-[200px] overflow-x-auto whitespace-nowrap custom-scrollbar pb-1">
+                            <div class="max-w-[300px] overflow-x-auto whitespace-nowrap custom-scrollbar pb-1">
                                 <div class="font-bold text-gray-800">{{ $item->name }}</div>
                                 <div class="text-[10px] text-gray-500 mt-0.5">{{ $item->email }}</div>
                             </div>
