@@ -90,8 +90,11 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/{id}', 'update')->name('.update');
             Route::delete('/{id}', 'destroy')->name('.destroy');
 
-            // Route tambahan untuk mengatur pertanyaan di dalam form
+            Route::post('/{id}/atur', 'storeField')->name('.storeField');
             Route::get('/{id}/atur', 'show')->name('.show');
+
+            Route::put('/field/{id}', 'updateField')->name('.updateField');
+            Route::delete('/field/{id}', 'destroyField')->name('.destroyField');
         });
     });
 

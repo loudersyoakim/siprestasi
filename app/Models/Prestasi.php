@@ -25,4 +25,12 @@ class Prestasi extends Model
     {
         return $this->belongsTo(KategoriPrestasi::class, 'kategori_prestasi_id');
     }
+
+    // Relasi untuk menarik semua anggota tim di prestasi ini
+    public function anggota()
+    {
+        return $this->belongsToMany(User::class, 'anggota_prestasis', 'prestasi_id', 'user_id')
+            ->withPivot('peran')
+            ->withTimestamps();
+    }
 }

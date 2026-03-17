@@ -72,8 +72,10 @@ class User extends Authenticatable
         return $this->hasOne(Mahasiswa::class);
     }
 
-    public function prestasi()
+    public function riwayatPrestasi()
     {
-        return $this->belongsToMany(Prestasi::class, 'prestasi_user', 'user_id', 'prestasi_id')->withTimestamps();
+        return $this->belongsToMany(Prestasi::class, 'anggota_prestasis', 'user_id', 'prestasi_id')
+            ->withPivot('peran')
+            ->withTimestamps();
     }
 }
