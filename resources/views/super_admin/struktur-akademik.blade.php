@@ -7,8 +7,7 @@
 
 <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Master Struktur Akademik</h3>
-        <p class="text-sm text-gray-500 mt-1">Kelola data Fakultas, Jurusan, dan Program Studi untuk kode NIM.</p>
+        <h3 class="text-xl font-black text-gray-800 tracking-tight">Master Struktur Akademik</h3>
     </div>
 </div>
 
