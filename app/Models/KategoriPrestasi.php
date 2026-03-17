@@ -2,18 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 
 class KategoriPrestasi extends Model
 {
-    use HasFactory;
+    use SoftDeletes;
 
-    protected $table = 'kategori_prestasi';
-    protected $fillable = ['nama_kategori'];
+    // Tambahkan huruf 's' di belakangnya
+    protected $table = 'kategori_prestasis';
+    protected $guarded = [];
 
-    // public function prestasi()
-    // {
-    //     return $this->hasMany(Prestasi::class, 'kategori_id');
-    // }
+    public function fields()
+    {
+        return $this->hasMany(FieldFormPrestasi::class, 'kategori_prestasi_id')->orderBy('urutan');
+    }
 }

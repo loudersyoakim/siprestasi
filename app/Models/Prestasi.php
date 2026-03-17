@@ -6,43 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Prestasi extends Model
 {
-    protected $table = 'prestasi';
+    protected $table = 'prestasis';
+    protected $guarded = [];
 
-    protected $fillable = [
-        'nama_prestasi',
-        'tingkat_id',
-        'jenis_id',
-        'kategori_id',
-        'tahun_akademik_id',
-        'sertifikat',
-        'tanggal_peroleh',
-        'deskripsi',
-        'status',
-        'alasan_ditolak',
-        'is_published'
+    // Cast kolom JSON otomatis menjadi Array
+    protected $casts = [
+        'data_dinamis' => 'array',
     ];
 
-    // Relasi Many-to-Many ke Mahasiswa
-    public function mahasiswa()
+    // Relasi ke Mahasiswa (User) yang melaporkan
+    public function user()
     {
-        return $this->belongsToMany(User::class, 'prestasi_user', 'prestasi_id', 'user_id')->withTimestamps();
+        return $this->belongsTo(User::class);
     }
 
-    // Relasi lainnya (Tingkat, Jenis, Kategori, Tahun Akademik)
-    public function tingkat()
-    {
-        return $this->belongsTo(TingkatPrestasi::class);
-    }
-    public function jenis()
-    {
-        return $this->belongsTo(JenisPrestasi::class);
-    }
+    // Relasi ke Kategori Form Prestasi
     public function kategori()
     {
-        return $this->belongsTo(KategoriPrestasi::class);
-    }
-    public function tahunAkademik()
-    {
-        return $this->belongsTo(TahunAkademik::class);
+        return $this->belongsTo(KategoriPrestasi::class, 'kategori_prestasi_id');
     }
 }
