@@ -94,33 +94,38 @@
 
     {{-- TABEL DATA --}}
     <div class="w-full overflow-x-auto custom-scrollbar">
-        <table class="w-full text-left border-collapse min-w-[900px]">
+        <table class="w-full text-left border-collapse min-w-[800px]">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
-                    {{-- Checkbox Master --}}
-                    <th class="px-6 py-4 w-12 text-center align-middle">
-                        <input type="checkbox" id="select-all" class="w-4 h-4 rounded border-gray-300 text-[#006633] focus:ring-[#006633] cursor-pointer">
+                    {{-- Checkbox Master (Dibuat sejajar di tengah) --}}
+                    <th class="w-12 px-4 py-3 align-middle">
+                        <div class="flex items-center justify-center mt-1">
+                            <input type="checkbox" id="select-all" class="w-4 h-4 rounded border-gray-300 text-[#006633] focus:ring-[#006633] cursor-pointer">
+                        </div>
                     </th>
-                    <th class="pr-6 py-4 whitespace-nowrap text-gray-400 text-[10px] uppercase font-bold tracking-wider align-middle w-12">No</th>
+                    
+                    {{-- Nomor --}}
+                    <th class="px-2 py-3 whitespace-nowrap align-middle">
+                        <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">No</span>
+                    </th>
 
-                    <th class="px-6 py-4 whitespace-nowrap align-middle">
+                    <th class="px-4 py-3 whitespace-nowrap align-middle">
                         <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Nama & Identitas</span>
                     </th>
 
-                    <th class="px-6 py-4 whitespace-nowrap align-top">
+                    <th class="px-4 py-3 whitespace-nowrap align-middle">
                         <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider block mt-1">Kontak Email</span>
                     </th>
 
-                    <th class="px-6 py-4 whitespace-nowrap align-middle">
+                    <th class="px-4 py-3 whitespace-nowrap align-middle">
                         <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Hak Akses</span>
                     </th>
 
-                    {{-- Diganti menjadi Status Akun --}}
-                    <th class="px-6 py-4 whitespace-nowrap align-middle">
+                    <th class="px-4 py-3 whitespace-nowrap align-middle">
                         <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Status</span>
                     </th>
 
-                    <th class="px-6 py-4 text-center whitespace-nowrap align-middle">
+                    <th class="px-4 py-3 text-center whitespace-nowrap align-middle">
                         <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Aksi</span>
                     </th>
                 </tr>
@@ -129,26 +134,32 @@
             <tbody class="divide-y divide-gray-100 text-sm bg-white">
                 @forelse($users as $index => $user)
                 <tr class="hover:bg-gray-50 transition-colors group">
-                    {{-- Checkbox Satuan --}}
-                    <td class="px-6 py-4 text-center align-middle">
-                        <input type="checkbox" class="row-checkbox w-4 h-4 rounded border-gray-300 text-[#006633] focus:ring-[#006633] cursor-pointer" value="{{ $user->id }}">
+                    {{-- Checkbox Satuan (Dibuat sejajar di tengah) --}}
+                    <td class="w-12 px-4 py-3 align-middle">
+                        <div class="flex items-center justify-center">
+                            <input type="checkbox" class="row-checkbox w-4 h-4 rounded border-gray-300 text-[#006633] focus:ring-[#006633] cursor-pointer" value="{{ $user->id }}">
+                        </div>
                     </td>
-                    <td class="pr-6 py-4 text-gray-400 font-medium align-middle text-xs">{{ $users->firstItem() + $index }}</td>
+                    
+                    {{-- Nomor --}}
+                    <td class="px-2 py-3 text-gray-400 font-medium align-middle text-xs">{{ $users->firstItem() + $index }}</td>
 
-                    <td class="px-6 py-4 align-middle">
-                        <div class="font-bold text-gray-800">{{ $user->name }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5">
-                            {{ $user->role === 'mahasiswa' ? 'NIM:' : 'NIP:' }} <span class="text-gray-700 font-medium">{{ $user->nim_nip ?? '-' }}</span>
+                    <td class="px-4 py-3 align-middle">
+                        <div class="max-w-[35vw] md:max-w-[20vw] overflow-x-auto whitespace-nowrap custom-scrollbar pb-1">
+                            <div class="font-bold text-gray-800">{{ $user->name }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">
+                                {{ $user->role === 'mahasiswa' ? 'NIM:' : 'NIP:' }} <span class="text-gray-700 font-medium">{{ $user->nim_nip ?? '-' }}</span>
+                            </div>
                         </div>
                     </td>
 
-                    <td class="px-6 py-4 align-middle text-gray-600">
-                        <div class="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap" title="{{ $user->email }}">
+                    <td class="px-4 py-3 align-middle text-gray-600">
+                        <div class="max-w-[35vw] md:max-w-[15vw] overflow-x-auto whitespace-nowrap custom-scrollbar pb-1" title="{{ $user->email }}">
                             {{ $user->email }}
                         </div>
                     </td>
 
-                    <td class="px-6 py-4 align-middle">
+                    <td class="px-4 py-3 align-middle">
                         @switch(trim($user->role))
                             @case('super_admin') <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#006633] bg-green-50 border border-green-200 rounded-md">Super Admin</span> @break
                             @case('admin') <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 rounded-md">Admin</span> @break
@@ -159,8 +170,7 @@
                         @endswitch
                     </td>
 
-                    {{-- Badge Status Akun --}}
-                    <td class="px-6 py-4 align-middle">
+                    <td class="px-4 py-3 align-middle">
                         @if($user->is_active == 1)
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200 rounded-md">
                                 <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Aktif
@@ -172,7 +182,7 @@
                         @endif
                     </td>
 
-                    <td class="px-6 py-4 align-middle text-center">
+                    <td class="px-4 py-3 align-middle text-center">
                         <div class="flex items-center justify-center gap-2">
                             
                             @if(isset($statusTab) && $statusTab === 'pending')

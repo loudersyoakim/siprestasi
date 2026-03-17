@@ -76,8 +76,10 @@ Route::middleware(['auth'])->group(function () {
         });
 
         Route::controller(DaftarMahasiswaController::class)->prefix('daftar-mahasiswa')->name('.daftar-mahasiswa')->group(function () {
-            Route::get('/daftar-mahasiswa', 'indexDaftarMahasiswa');
-            Route::delete('/daftar-mahasiswa/{id}', 'destroy')->name('.destroy');
+            Route::get('/', 'indexDaftarMahasiswa');
+            Route::get('/{id}/edit', 'edit')->name('.edit');
+            Route::put('/{id}', 'update')->name('.update');
+            Route::delete('/{id}', 'destroy')->name('.destroy');
         });
     });
 

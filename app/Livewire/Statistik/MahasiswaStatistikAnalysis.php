@@ -14,20 +14,24 @@ class MahasiswaStatistikAnalysis extends Component
         $user = Auth::user();
         $mahasiswa = Mahasiswa::where('user_id', $user->id)->first();
 
-        // 1. HITUNG PERSENTASE PROFIL
+        // 1. HITUNG PERSENTASE PROFIL (SINKRON DENGAN PROFILCONTROLLER)
         $persentaseProfil = 0;
         $totalField = 8;
-        $fieldTerisi = 2;
+        $fieldTerisi = 2; // Nama & Email pasti ada
+
+        if (!empty($user->nim_nip)) $fieldTerisi++; // Cek NIM dari tabel user
 
         if ($mahasiswa) {
-            if (!empty($mahasiswa->nim)) $fieldTerisi++;
+            if (!empty($mahasiswa->foto_profil)) $fieldTerisi++; // Tambahkan cek foto
             if (!empty($mahasiswa->jenis_kelamin)) $fieldTerisi++;
             if (!empty($mahasiswa->angkatan)) $fieldTerisi++;
             if (!empty($mahasiswa->fakultas_id)) $fieldTerisi++;
             if (!empty($mahasiswa->jurusan_id)) $fieldTerisi++;
             if (!empty($mahasiswa->prodi_id)) $fieldTerisi++;
         }
-        $persentaseProfil = round(($fieldTerisi / $totalField) * 100);
+
+        // Gunakan min() agar nilainya tidak bocor lebih dari 100% jika ada lebihan logika
+        $persentaseProfil = min(round(($fieldTerisi / $totalField) * 100), 100);
 
         // 2. AMBIL DATA PRESTASI (HANYA ANGKA)
         $total_prestasi = 0;
