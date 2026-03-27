@@ -73,9 +73,16 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/{id}', 'updateAkun')->name('akun.update');
             Route::delete('/{id}', 'destroyAkun')->name('akun.destroy');
             Route::post('/import', 'importAkun')->name('akun.import');
+            Route::get('/import-status', 'checkImportStatus')->name('akun.import-status');
+            Route::post('/import-status/clear', 'clearImportStatus')->name('akun.import-status.clear');
             Route::get('/export-template', 'exportFormatAkun')->name('akun.export-format');
             Route::post('/bulk', 'bulkAction')->name('akun.bulk');
             Route::patch('/{id}/aktivasi', 'aktivasiAkun')->name('akun.aktivasi');
+
+            Route::get('/role-permission', 'indexRolePermission')->middleware('permission:akun.manage_role')->name('akun.role-permission');
+            Route::post('/role-permission/update', 'updateRolePermission')
+                ->middleware('permission:akun.manage_role')
+                ->name('akun.role-permission.update');
         });
 
     // -------------------------------------------------------------

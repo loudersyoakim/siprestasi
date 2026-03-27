@@ -5,9 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIARPRESTASI</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons.min.css') }}">
+    
     <script src="{{ asset('js/highcharts.js') }}"></script>
     <script src="{{ asset('js/highcharts-3d.js') }}"></script>
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -39,7 +42,6 @@
     </div>
 </div>
 </body>
-{{-- SCRIPT JAVASCRIPT UNIVERSAL --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const dropdownToggles = document.querySelectorAll('.nav-dropdown-toggle');
@@ -47,26 +49,45 @@
         dropdownToggles.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation(); // Mencegah event bubbling yang merusak hover
                 
                 const menu = this.nextElementSibling;
                 const icon = this.querySelector('.bi-chevron-down');
                 
+                // Toggle Dropdown
                 if(menu.classList.contains('hidden')) {
                     menu.classList.remove('hidden');
                     menu.classList.add('block');
-                    icon.classList.add('rotate-180', 'text-[#006633]');
+                    if(icon) icon.classList.add('rotate-180', 'text-[#006633]');
                 } else {
                     menu.classList.remove('block');
                     menu.classList.add('hidden');
-                    icon.classList.remove('rotate-180', 'text-[#006633]');
+                    if(icon) icon.classList.remove('rotate-180', 'text-[#006633]');
                 }
             });
         });
+
+        // Toggle Modal Bantuan
+        window.toggleHelpModal = function() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.toggle('hidden');
+        }
     });
 
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('-translate-x-full');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        // Memastikan overlay benar-benar hilang agar tidak menghalangi hover
+        if(sidebar.classList.contains('-translate-x-full')) {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
     }
 </script>
 </html>

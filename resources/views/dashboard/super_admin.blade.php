@@ -3,7 +3,7 @@
 @section('content')
 <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
     <div>
-        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Beranda Dashboard</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Dashboard</h3>
     </div>
     <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
         <i class="bi bi-calendar3 text-[#006633]"></i>

@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Prodi;
-use App\Models\FakultasImport;
-use App\Models\JurusanImport;
 use App\Models\Permission;
 use App\Imports\UsersImport;
 use App\Exports\TemplateAkunExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ManajemenAkunController extends Controller
 {
@@ -22,53 +23,43 @@ class ManajemenAkunController extends Controller
      */
     public function indexManajemenAkun(Request $request)
     {
-        // Panggil relasi supaya query lebih efisien
         $query = User::with(['role', 'prodi', 'fakultas', 'jurusan']);
 
-        // --- PROTEKSI: Admin biasa tidak boleh melihat Super Admin ---
         if (Auth::user()->role->kode_role !== 'SA') {
-            $query->whereHas('role', function ($q) {
-                $q->where('kode_role', '!=', 'SA');
-            });
+            $query->whereHas('role', fn($q) => $q->where('kode_role', '!=', 'SA'));
         }
 
-        // Filter tab status
         $statusTab = $request->input('tab', 'aktif');
-        if ($statusTab === 'pending') {
-            $query->where('is_active', 0);
-        } else {
-            $query->where('is_active', 1);
-        }
+        $query->where('is_active', $statusTab === 'pending' ? 0 : 1);
 
-        // Hitung total pending untuk badge notifikasi
         $pendingCount = User::where('is_active', 0)->count();
 
-        // 1. Search Global
         if ($request->filled('search')) {
             $search = strtolower($request->search);
-            $query->where(function ($q) use ($search) {
+            $query->where(
+                fn($q) =>
                 $q->where('name', 'LIKE', "%{$search}%")
                     ->orWhere('nim_nip', 'LIKE', "%{$search}%")
-                    ->orWhere('email', 'LIKE', "%{$search}%");
-            });
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+            );
         }
 
-        // 2. Filter Role
         if ($request->filled('role_id')) {
             $query->where('role_id', $request->role_id);
         }
 
-        // 3. Sorting
-        if ($request->filled('sort') && $request->filled('direction')) {
-            $query->orderBy($request->sort, $request->direction);
-        } else {
-            $query->latest();
-        }
+        $query->when(
+            $request->filled('sort'),
+            fn($q) => $q->orderBy($request->sort, $request->direction ?? 'asc'),
+            fn($q) => $q->latest()
+        );
 
-        $users = $query->paginate(10)->withQueryString();
-        $roles = Role::all();
-
-        return view("manajemen-akun.index", compact('users', 'statusTab', 'pendingCount', 'roles'));
+        return view("manajemen-akun.index", [
+            'users' => $query->paginate(10)->withQueryString(),
+            'statusTab' => $statusTab,
+            'pendingCount' => $pendingCount,
+            'roles' => Role::all()
+        ]);
     }
 
     public function createAkun()
@@ -219,25 +210,74 @@ class ManajemenAkunController extends Controller
     public function importAkun(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls'
-        ], [
-            'file.required' => 'Pilih file terlebih dahulu.',
-            'file.mimes' => 'Format harus .xlsx atau .xls'
+            'file' => 'required|file|mimes:xlsx,xls|max:10240',
         ]);
 
-        try {
-            Excel::import(new UsersImport, $request->file('file'));
+        $userId = Auth::id();
+        $cacheKey = "import_progress_{$userId}";
 
-            return redirect()->route('super_admin.manajemen-akun')
-                ->with('success', 'Data akun berhasil diimport!');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal Import: ' . $e->getMessage());
+        // Simpan file
+        $path = $request->file('file')->store('temp-imports', 'local');
+        $fullPath = Storage::disk('local')->path($path);
+
+        // Hitung baris TANPA load semua ke memory
+        $reader = IOFactory::createReaderForFile($fullPath);
+        $reader->setReadDataOnly(true);
+
+        $spreadsheet = $reader->load($fullPath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $totalRows = max(0, $sheet->getHighestDataRow() - 1);
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        if ($totalRows === 0) {
+            return back()->with('error', 'File kosong atau tidak valid.');
         }
+
+        // Init progress
+        Cache::put($cacheKey, [
+            'current' => 0,
+            'total' => $totalRows,
+            'status' => 'processing',
+            'message' => 'Memulai import...'
+        ], now()->addHours(2));
+
+        // Jalankan queue
+        Excel::queueImport(
+            new UsersImport($userId, $cacheKey),
+            $path,
+            'local'
+        );
+
+        return back()->with('success', "Import {$totalRows} data sedang diproses.");
+    }
+
+    public function checkImportStatus()
+    {
+        $cacheKey = 'import_progress_' . Auth::id();
+
+        return response()->json(
+            Cache::get($cacheKey, [
+                'current' => 0,
+                'total' => 0,
+                'status' => 'idle',
+                'message' => null,
+            ])
+        );
+    }
+
+    public function clearImportStatus()
+    {
+        Cache::forget('import_progress_' . Auth::id());
+
+        return response()->json(['status' => 'cleared']);
     }
 
     public function exportFormatAkun()
     {
-        return Excel::download(new TemplateAkunExport, 'template_akun.xlsx');
+        return Excel::download(new TemplateAkunExport, 'template_import_akun.xlsx');
     }
 
 
@@ -256,5 +296,50 @@ class ManajemenAkunController extends Controller
         ];
 
         return view('manajemen-akun.role-permission', compact('roles', 'permissionsGrouped', 'stats'));
+    }
+
+    public function updateRolePermission(Request $request)
+    {
+        // 1. Validasi input
+        $request->validate([
+            'role_id'       => 'required',
+            'permission_id' => 'required',
+            'action'        => 'required|in:attach,detach'
+        ]);
+
+        $roleId = (int) $request->role_id;
+        $permId = (int) $request->permission_id;
+
+        // 2. Proteksi Super Admin (SA) - ID 1 biasanya SA
+        if ($roleId === 1) {
+            return response()->json(['success' => false, 'message' => 'Izin Super Admin mutlak.'], 403);
+        }
+
+        try {
+            // 3. PAKSA TEMBAK LANGSUNG KE TABEL PIVOT
+            if ($request->action === 'attach') {
+                // Gunakan updateOrInsert untuk mencegah error "Duplicate Entry"
+                \Illuminate\Support\Facades\DB::table('role_permissions')->updateOrInsert(
+                    ['role_id' => $roleId, 'permission_id' => $permId],
+                    ['role_id' => $roleId, 'permission_id' => $permId]
+                );
+            } else {
+                // Hapus data langsung
+                \Illuminate\Support\Facades\DB::table('role_permissions')
+                    ->where('role_id', $roleId)
+                    ->where('permission_id', $permId)
+                    ->delete();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Database berhasil diperbarui.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kesalahan Database: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

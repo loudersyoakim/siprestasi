@@ -75,95 +75,87 @@
         </div>
     </form>
 </div>
-
 {{-- MODAL IMPORT --}}
-<div id="modal-import" class="fixed inset-0 z-[80] hidden overflow-y-auto">
+<div id="modal-import" class="fixed inset-0 z-[100] hidden overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen p-4 bg-black/60 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
-            <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div class="flex items-center gap-2">
-                    <i class="bi bi-file-earmark-excel-fill text-green-600 text-lg"></i>
-                    <h4 class="font-black text-gray-800 uppercase tracking-tight text-sm">Import Data Akun</h4>
+        <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {{-- Header Modal --}}
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-file-earmark-excel-fill text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-gray-800 uppercase tracking-tight">Import Data Pengguna</h4>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Excel / Spreadsheet (.xlsx)</p>
+                    </div>
                 </div>
-                <button onclick="closeModal('modal-import')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="bi bi-x-lg"></i></button>
+                <button onclick="closeModal('modal-import')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
-            <form action="{{ route('akun.import') }}" method="POST" enctype="multipart/form-data" class="p-8">
+            <form action="{{ route('akun.import') }}" method="POST" enctype="multipart/form-data" class="p-8 space-y-6">
                 @csrf
-                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center mb-8">
-                    <p class="text-xs text-blue-600 font-medium mb-4 leading-relaxed">Gunakan template resmi agar data terbaca sempurna.</p>
-                    <a href="{{ route('akun.export-format') }}" class="inline-flex items-center gap-2 bg-white text-[#006633] border border-[#006633] px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#006633] hover:text-white transition-all shadow-sm">
+                {{-- Instruksi & Template --}}
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4">
+                    <div class="flex-1 text-center sm:text-left">
+                        <p class="text-xs text-blue-700 font-bold mb-1">PENTING!</p>
+                        <p class="text-[11px] text-blue-600 leading-relaxed">Gunakan template resmi untuk menghindari kesalahan pembacaan kolom oleh sistem.</p>
+                    </div>
+                    <a href="{{ route('akun.export-format') }}" class="bg-white text-[#006633] border border-[#006633] px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#006633] hover:text-white transition-all shadow-sm flex items-center gap-2">
                         <i class="bi bi-cloud-arrow-down-fill text-sm"></i>
-                        Download Template Excel
+                        Download Template
                     </a>
                 </div>
 
+                {{-- Area Upload --}}
                 <div class="space-y-3">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Pilih File Spreadsheet</label>
-                    
-                    {{-- AREA DROPZONE DENGAN FEEDBACK VISUAL --}}
-                    <div class="relative border-2 border-dashed border-gray-200 rounded-3xl p-10 text-center hover:border-[#006633] transition-all group bg-gray-50/50" id="drop-area">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Pilih File</label>
+                    <div class="relative border-2 border-dashed border-gray-200 rounded-[1.5rem] p-12 text-center hover:border-[#006633] transition-all group bg-gray-50/50" id="drop-area">
                         <input type="file" name="file" id="file-input" accept=".xlsx, .xls" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         
-                        {{-- Tampilan Sebelum Pilih --}}
-                        <div id="before-select">
-                            <i class="bi bi-cloud-upload text-4xl text-gray-300 group-hover:text-[#006633] transition-all"></i>
-                            <p class="text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-wide group-hover:text-gray-600">Klik atau Tarik file ke sini</p>
+                        <div id="ui-before" class="space-y-2">
+                            <i class="bi bi-cloud-upload text-5xl text-gray-300 group-hover:text-[#006633] transition-all"></i>
+                            <p class="text-xs text-gray-400 font-bold uppercase tracking-wide group-hover:text-gray-600">Klik atau Tarik file ke sini</p>
                         </div>
 
-                        {{-- Tampilan Sesudah Pilih (Default Tersembunyi) --}}
-                        <div id="after-select" class="hidden flex-col items-center">
-                            <div class="w-16 h-16 bg-green-100 text-[#006633] rounded-2xl flex items-center justify-center mb-3 animate-bounce">
-                                <i class="bi bi-file-earmark-check-fill text-3xl"></i>
+                        <div id="ui-after" class="hidden flex-col items-center">
+                            <div class="w-20 h-20 bg-green-50 text-[#006633] rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                <i class="bi bi-file-earmark-check-fill text-4xl"></i>
                             </div>
-                            <p id="file-name-display" class="text-sm font-black text-gray-800 break-all"></p>
-                            <p class="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-widest">File siap diimpor</p>
-                            <button type="button" onclick="resetFile()" class="mt-4 text-[10px] font-black text-red-500 uppercase hover:underline">Ganti File</button>
+                            <p id="name-file" class="text-sm font-black text-gray-800 mb-1"></p>
+                            <span class="px-3 py-1 bg-green-500 text-white text-[9px] font-black uppercase rounded-full">File Siap</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-8 flex gap-3">
-                    <button type="button" onclick="closeModal('modal-import')" class="flex-1 py-3.5 text-xs font-bold text-gray-500 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all">Batal</button>
-                    <button type="submit" class="flex-1 py-3.5 text-xs font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all">Mulai Import</button>
+                {{-- Action --}}
+                <div class="pt-6 border-t border-gray-100 flex gap-3">
+                    <button type="button" onclick="closeModal('modal-import')" class="flex-1 py-4 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-all">Batal</button>
+                    <button type="submit" class="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all">Mulai Import Sekarang</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-<script>
-    const fileInput = document.getElementById('file-input');
-    const beforeSelect = document.getElementById('before-select');
-    const afterSelect = document.getElementById('after-select');
-    const fileNameDisplay = document.getElementById('file-name-display');
 
-    // Deteksi saat file dipilih
-    fileInput.addEventListener('change', function() {
+<script>
+    const input = document.getElementById('file-input');
+    const before = document.getElementById('ui-before');
+    const after = document.getElementById('ui-after');
+    const nameDisp = document.getElementById('name-file');
+
+    input.addEventListener('change', function() {
         if (this.files && this.files[0]) {
-            beforeSelect.classList.add('hidden');
-            afterSelect.classList.remove('hidden');
-            afterSelect.classList.add('flex');
-            fileNameDisplay.textContent = this.files[0].name;
+            before.classList.add('hidden');
+            after.classList.remove('hidden');
+            after.classList.add('flex');
+            nameDisp.textContent = this.files[0].name;
         }
     });
 
-    // Reset file selection
-    function resetFile() {
-        fileInput.value = '';
-        beforeSelect.classList.remove('hidden');
-        afterSelect.classList.add('hidden');
-        afterSelect.classList.remove('flex');
-    }
-
-    function openModal(id) { 
-        document.getElementById(id).classList.remove('hidden'); 
-        document.body.style.overflow = 'hidden'; 
-    }
-    
-    function closeModal(id) { 
-        document.getElementById(id).classList.add('hidden'); 
-        document.body.style.overflow = 'auto'; 
-        resetFile(); 
-    }
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = 'auto'; }
 </script>
 @endsection
