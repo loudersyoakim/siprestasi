@@ -6,24 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Prestasi extends Model
 {
-    protected $table = 'prestasis';
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
-    // Cast kolom JSON otomatis menjadi Array
     protected $casts = [
-        'data_dinamis' => 'array',
+        'data_dinamis' => 'array', // Otomatis convert JSON jadi Array di PHP
     ];
 
-    // Relasi ke Mahasiswa (User) yang melaporkan
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relasi ke Kategori Form Prestasi
-    public function kategori()
+    public function formPrestasi()
     {
-        return $this->belongsTo(KategoriPrestasi::class, 'kategori_prestasi_id');
+        return $this->belongsTo(FormPrestasi::class);
     }
 
     // Relasi untuk menarik semua anggota tim di prestasi ini

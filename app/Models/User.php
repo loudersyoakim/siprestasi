@@ -2,80 +2,97 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use App\Models\Mahasiswa;
-use App\Models\Prestasi;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
-use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Support\Facades\DB; // Tambahkan ini untuk Query Builder di hasPermission
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'nim_nip',
-        'email',
-        'password',
-        'role',
-        'is_active',
-    ];
+    protected $guarded = ['id'];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
-    /**
-     * Get the user's initials
-     */
-    public function initials(): string
+    // =======================================================
+    // RELASI DATABASE
+    // =======================================================
+
+    public function role()
     {
-        return Str::of($this->name)
-            ->explode(' ')
-            ->take(2)
-            ->map(fn($word) => Str::substr($word, 0, 1))
-            ->implode('');
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
-    public function mahasiswa()
+    public function prodi()
     {
-        return $this->hasOne(Mahasiswa::class);
+        return $this->belongsTo(Prodi::class);
     }
 
+    // Prestasi yang disubmit oleh user ini (sebagai Ketua/Pelapor)
+    public function prestasis()
+    {
+        return $this->hasMany(Prestasi::class);
+    }
+
+    // Prestasi di mana user ini menjadi anggota tim (Tabel Pivot)
     public function riwayatPrestasi()
     {
         return $this->belongsToMany(Prestasi::class, 'anggota_prestasis', 'user_id', 'prestasi_id')
             ->withPivot('peran')
             ->withTimestamps();
+    }
+
+
+    public function fakultas()
+    {
+        return $this->belongsTo(Fakultas::class, 'fakultas_id');
+    }
+
+    public function jurusan()
+    {
+        return $this->belongsTo(Jurusan::class, 'jurusan_id');
+    }
+
+    // =======================================================
+    // HELPER & LOGIKA SISTEM (RBAC)
+    // =======================================================
+
+    // Variabel untuk menyimpan izin sementara agar tidak query database berulang kali (Sangat Cepat!)
+    protected $userPermissions = null;
+
+    /**
+     * Cek apakah user punya permission tertentu (Sistem RBAC)
+     */
+    public function hasPermission($permissionCode)
+    {
+        // Jika user tidak punya role_id, langsung tolak aksesnya
+        if (!$this->role_id) {
+            return false;
+        }
+
+        // Jika array izin masih kosong, ambil dari database 1X SAJA
+        if ($this->userPermissions === null) {
+            $this->userPermissions = DB::table('role_permissions')
+                ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
+                ->where('role_permissions.role_id', $this->role_id)
+                ->pluck('permissions.kode_permission')
+                ->toArray();
+        }
+
+        // Cek apakah kode izin yang diminta ada di dalam daftar array milik user
+        return in_array($permissionCode, $this->userPermissions);
     }
 }

@@ -8,10 +8,15 @@
         <div class="bg-white border border-gray-100 rounded-2xl p-8 sm:p-10 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
 
             <div class="flex flex-col items-center text-center mb-8">
-                <h1 class="text-xl font-black text-gray-900 tracking-tight uppercase">
-                    SI<span class="text-[#006633]">PRESTASI</span>
+                @php
+                    $appName = $pengaturan['nama_aplikasi'] ?? '';
+                    $firstPart = substr($appName, 0, 2);
+                    $lastPart = substr($appName, 2);
+                @endphp
+                <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">
+                    {{ $firstPart }}<span class="text-[#006633]">{{ $lastPart }}</span>
                 </h1>
-                <p class="text-xs text-gray-500 mt-1 font-medium uppercase tracking-widest">REGITRASI AKUN</p>
+                <p class="text-xs text-gray-500 mt-1.5 font-medium uppercase tracking-widest">REGISTRASI</p>
             </div>
 
             <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-4">

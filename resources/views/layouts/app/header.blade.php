@@ -13,47 +13,35 @@
         </div>
     </div>
 
-    {{-- Kanan: Teks Unimed & Profil --}}
+    {{-- Kanan: Help & Profil --}}
     <div class="flex items-center gap-5">
         
-        {{-- Teks Institusi ala SIMPEG (Sembunyi di HP)
-        <div class="hidden lg:flex flex-col items-end border-r border-gray-200 pr-5">
-            <h2 class="text-sm font-black text-[#006633] tracking-wide uppercase leading-tight">Universitas Negeri Medan</h2>
-            <p class="text-[10px] text-gray-500 italic">"The Character Building University"</p>
-        </div> --}}
-
-        {{-- Bantuan --}}
-        {{-- <button onclick="toggleHelpModal()" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 rounded-full transition-all" title="Bantuan">
+        {{-- TOMBOL HELP (Membuka Modal Bantuan) --}}
+        <button onclick="toggleHelpModal()" class="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-[#006633] hover:bg-green-50 rounded-full transition-all" title="Bantuan">
             <i class="bi bi-question-circle text-xl"></i>
-        </button> --}}
+        </button>
 
         {{-- Profil --}}
-        <div class="relative" x-data="{ openProfile: false }">
+        <div class="relative">
             <div class="flex items-center gap-3 cursor-pointer" id="profile-btn">
-    <div class="text-right hidden sm:block">
-        <p class="text-xs font-bold text-gray-900 leading-none">{{ Auth::user()->name }}</p>
-        
-        {{-- TAMPILKAN NIM JIKA ADA, JIKA TIDAK TAMPILKAN ROLE --}}
-        <p class="text-[10px] text-gray-500 capitalize mt-0.5 font-semibold tracking-wide">
-            @if(Auth::user()->nim_nip)
-                {{ Auth::user()->nim_nip }}
-            @else
-                {{ str_replace('_', ' ', Auth::user()->role) }}
-            @endif
-        </p>
-    </div>
-    
-    {{-- TAMPILKAN FOTO PROFIL JIKA ADA, JIKA TIDAK TAMPILKAN INISIAL NAMA --}}
-    @if(Auth::user()->mahasiswa && Auth::user()->mahasiswa->foto_profil)
-        <img src="{{ asset('storage/' . Auth::user()->mahasiswa->foto_profil) }}" 
-             alt="Foto Profil" 
-             class="w-10 h-10 object-cover border border-green-100 rounded-full shadow-sm transition-transform hover:scale-105">
-    @else
-        <div class="w-10 h-10 bg-green-50 text-[#006633] border border-green-100 rounded-full flex items-center justify-center font-bold text-lg shadow-sm transition-transform hover:scale-105">
-            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-        </div>
-    @endif
-</div>
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs font-bold text-gray-900 leading-none">{{ Auth::user()->name }}</p>
+                    <p class="text-[10px] text-gray-500 mt-0.5 font-semibold tracking-wide">
+                        {{ Auth::user()->nim_nip ?? Auth::user()->role->nama_role }}
+                    </p>
+                </div>
+                
+                {{-- Foto Profil Dinamis (Langsung dari tabel users) --}}
+                @if(Auth::user()->foto_profil)
+                    <img src="{{ asset('storage/' . Auth::user()->foto_profil) }}" 
+                         alt="Foto Profil" 
+                         class="w-10 h-10 object-cover border border-green-100 rounded-full shadow-sm transition-transform hover:scale-105">
+                @else
+                    <div class="w-10 h-10 bg-green-50 text-[#006633] border border-green-100 rounded-full flex items-center justify-center font-bold text-lg shadow-sm transition-transform hover:scale-105">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                    </div>
+                @endif
+            </div>
 
             {{-- Dropdown Profil --}}
             <div id="profile-dropdown" class="hidden absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50">
@@ -69,57 +57,5 @@
                 </form>
             </div>
         </div>
-
     </div>
 </header>
-<script>
-    // JS Manual untuk Sidebar
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebar-overlay');
-
-        if (!sidebar || !overlay) {
-            console.error("Elemen sidebar atau overlay tidak ditemukan!");
-            return;
-        }
-
-        // Toggle Sidebar
-        sidebar.classList.toggle('-translate-x-full');
-
-        // Toggle Overlay
-        if (overlay.classList.contains('hidden')) {
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.add('opacity-100'), 10);
-        } else {
-            overlay.classList.remove('opacity-100');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
-        }
-    }
-
-    // JS Manual untuk Dropdown Profil
-    const profileBtn = document.getElementById('profile-btn');
-    const profileDropdown = document.getElementById('profile-dropdown');
-
-    if (profileBtn) {
-        profileBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Biar nggak langsung ketutup sama window listener
-            profileDropdown.classList.toggle('hidden');
-        });
-    }
-
-    // JS Manual untuk Modal Help
-    function toggleHelpModal() {
-        const modal = document.getElementById('help-modal');
-        modal.classList.toggle('hidden');
-    }
-
-    // Klik di luar untuk menutup
-    window.addEventListener('click', (e) => {
-        if (profileBtn && !profileBtn.contains(e.target)) {
-            profileDropdown.classList.add('hidden');
-        }
-        if (e.target.id === 'help-modal') {
-            toggleHelpModal();
-        }
-    });
-</script>

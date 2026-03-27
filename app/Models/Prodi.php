@@ -2,30 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Prodi extends Model
 {
-    use HasFactory;
-
     protected $table = 'prodi';
-    protected $fillable = ['jurusan_id', 'nama_prodi', 'jenjang', 'kode_prodi'];
+    protected $guarded = ['id'];
 
     public function jurusan()
     {
-        return $this->belongsTo(Jurusan::class, 'jurusan_id');
+        return $this->belongsTo(Jurusan::class);
     }
 
-    public function fakultas()
+    public function users()
     {
-        return $this->hasOneThrough(
-            Fakultas::class,
-            Jurusan::class,
-            'id',
-            'id',
-            'jurusan_id',
-            'fakultas_id'
-        );
+        return $this->hasMany(User::class);
     }
 }

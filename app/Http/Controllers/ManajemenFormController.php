@@ -2,100 +2,107 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KategoriPrestasi;
-use App\Models\FieldFormPrestasi; // Pastikan ini di-import
+use App\Models\FormPrestasi;
+use App\Models\FieldFormPrestasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
 class ManajemenFormController extends Controller
 {
-    // Helper prefix untuk membedakan view Admin dan Super Admin
-    private function getPrefix()
-    {
-        return Auth::user()->role === 'super_admin' ? 'super_admin' : 'admin';
-    }
+    // ==========================================
+    // BAGIAN 1: MANAJEMEN KATEGORI FORM
+    // ==========================================
 
-    // 1. Menampilkan Halaman Utama (Daftar Kategori)
     public function indexManajemenForm()
     {
-        $prefix = $this->getPrefix();
-        $kategori = KategoriPrestasi::withCount('fields')->get();
-        return view("$prefix.manajemen-form", compact('kategori'));
+        // Ambil semua form beserta jumlah field-nya
+        $forms = FormPrestasi::withCount('fields')->latest()->get();
+        return view('super_admin.manajemen_form.index', compact('forms'));
     }
 
-    // 2. Simpan Kategori Baru
     public function store(Request $request)
     {
-        $request->validate(['nama_kategori' => 'required']);
-
-        KategoriPrestasi::create([
-            'nama_kategori' => $request->nama_kategori,
-            'slug' => Str::slug($request->nama_kategori),
-            'deskripsi' => $request->deskripsi
+        $request->validate([
+            'nama_form' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
         ]);
 
-        return back()->with('success', 'Formulir baru berhasil dibuat!');
+        FormPrestasi::create([
+            'nama_form' => $request->nama_form,
+            'slug'      => Str::slug($request->nama_form . '-' . Str::random(5)), // Antisipasi nama sama
+            'deskripsi' => $request->deskripsi,
+            'is_active' => true,
+            'created_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Form Kategori Prestasi berhasil dibuat! Silakan atur pertanyaannya.');
     }
 
-    // 3. Menampilkan Halaman Detail Form Builder (Ini yang error tadi)
-    public function show($id)
-    {
-        $prefix = $this->getPrefix();
-
-        // Ambil kategori beserta pertanyaan di dalamnya, diurutkan berdasarkan kolom 'urutan'
-        $kategori = KategoriPrestasi::with(['fields' => function ($query) {
-            $query->orderBy('urutan', 'asc');
-        }])->findOrFail($id);
-
-        return view("$prefix.manajemen-form-detail", compact('kategori'));
-    }
-
-    // 4. Update Nama/Deskripsi Kategori (Dari Modal Edit)
     public function update(Request $request, $id)
     {
-        $kategori = KategoriPrestasi::findOrFail($id);
-        $kategori->update([
-            'nama_kategori' => $request->nama_kategori,
-            'slug' => Str::slug($request->nama_kategori),
-            'deskripsi' => $request->deskripsi
+        $form = FormPrestasi::findOrFail($id);
+
+        $request->validate([
+            'nama_form' => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
         ]);
 
-        return back()->with('success', 'Kategori berhasil diperbarui');
+        $form->update([
+            'nama_form' => $request->nama_form,
+            // Slug sengaja tidak diupdate agar URL yang sudah nyebar tidak rusak
+            'deskripsi' => $request->deskripsi,
+            'is_active' => $request->has('is_active'), // Checkbox aktif/tidak
+        ]);
+
+        return back()->with('success', 'Informasi Form berhasil diperbarui!');
     }
 
-    // 5. Hapus Kategori (Soft Delete)
     public function destroy($id)
     {
-        $kategori = KategoriPrestasi::findOrFail($id);
-        $kategori->delete();
-
-        return back()->with('success', 'Formulir dinonaktifkan (Data lama tetap aman)');
+        $form = FormPrestasi::findOrFail($id);
+        $form->delete(); // Ini Soft Delete, jadi data aman
+        return back()->with('success', 'Form berhasil dinonaktifkan / dihapus sementara!');
     }
 
-    // Menyimpan field/pertanyaan baru ke dalam form
+    // ==========================================
+    // BAGIAN 2: MANAJEMEN FIELD (PERTANYAAN)
+    // ==========================================
+
+    public function show($id)
+    {
+        // Halaman "Atur Pertanyaan"
+        $form = FormPrestasi::with(['fields' => function ($q) {
+            $q->orderBy('urutan', 'asc');
+        }])->findOrFail($id);
+
+        return view('super_admin.manajemen_form.atur_field', compact('form'));
+    }
+
     public function storeField(Request $request, $id)
     {
-        // 1. Pastikan kategori form-nya ada
-        $kategori = KategoriPrestasi::findOrFail($id);
+        $form = FormPrestasi::findOrFail($id);
 
-        // 2. Validasi inputan admin
         $request->validate([
             'label' => 'required|string|max:255',
             'tipe'  => 'required|string',
         ]);
 
-        // 3. Cari urutan terakhir, lalu tambah 1 agar selalu ada di paling bawah
-        $urutanTerakhir = $kategori->fields()->max('urutan') ?? 0;
+        $opsiArray = null;
+        if ($request->tipe === 'select' && $request->opsi) {
+            $opsiArray = array_map('trim', explode(',', $request->opsi));
+        }
 
-        // 4. Simpan ke tabel field_form_prestasis
-        $kategori->fields()->create([
+        // Cari urutan terakhir
+        $urutanTerakhir = $form->fields()->max('urutan') ?? 0;
+
+        $form->fields()->create([
             'nama_field'  => Str::slug($request->label, '_'),
-
             'label'       => $request->label,
             'tipe'        => $request->tipe,
             'keterangan'  => $request->keterangan,
-            'is_required' => $request->has('is_required'), // Kalau dicentang jadi true (1)
+            'opsi'        => $opsiArray,
+            'is_required' => $request->has('is_required'),
             'urutan'      => $urutanTerakhir + 1,
         ]);
 
@@ -104,7 +111,6 @@ class ManajemenFormController extends Controller
 
     public function updateField(Request $request, $id)
     {
-        // Cari field berdasarkan ID
         $field = FieldFormPrestasi::findOrFail($id);
 
         $request->validate([
@@ -112,25 +118,27 @@ class ManajemenFormController extends Controller
             'tipe'  => 'required|string',
         ]);
 
+        $opsiArray = null;
+        if ($request->tipe === 'select' && $request->opsi) {
+            $opsiArray = array_map('trim', explode(',', $request->opsi));
+        }
+
         $field->update([
             'nama_field'  => Str::slug($request->label, '_'),
             'label'       => $request->label,
             'tipe'        => $request->tipe,
             'keterangan'  => $request->keterangan,
-            'is_required' => $request->has('is_required'), // bernilai true jika dicentang
+            'opsi'        => $opsiArray,
+            'is_required' => $request->has('is_required'),
         ]);
 
         return back()->with('success', 'Pertanyaan berhasil diperbarui!');
     }
 
-    // Hapus Field/Pertanyaan
     public function destroyField($id)
     {
         $field = FieldFormPrestasi::findOrFail($id);
-
-        // Hapus permanen (atau pakai $field->delete() jika pakai soft deletes)
-        $field->forceDelete();
-
-        return back()->with('success', 'Pertanyaan berhasil dihapus!');
+        $field->delete(); // Karena tidak pakai soft delete di tabel ini, maka ini force delete
+        return back()->with('success', 'Pertanyaan berhasil dihapus permanen!');
     }
 }

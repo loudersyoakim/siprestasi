@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Fakultas;
 use App\Models\Jurusan;
 use App\Models\Prodi;
-use App\Models\Mahasiswa;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -16,37 +16,41 @@ class ProfilController extends Controller
 {
     public function indexProfil()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        $mahasiswa = Mahasiswa::firstOrCreate(['user_id' => $user->id]);
         $isUpdated = false;
 
-        // Auto-fill dari NIM
+        // ========================================================
+        // 1. LOGIKA AUTO-FILL NIM (Sangat Cerdas, Kita Pertahankan!)
+        // ========================================================
         $nim = $user->nim_nip;
         if (!empty($nim) && strlen($nim) >= 7) {
             $kodeFakultas = substr($nim, 0, 1);
             $tahunAngkatan = '20' . substr($nim, 1, 2);
             $kodeProdi = substr($nim, 5, 2);
 
-            if (empty($mahasiswa->angkatan)) {
-                $mahasiswa->angkatan = $tahunAngkatan;
+            // Isi Angkatan jika kosong
+            if (empty($user->angkatan)) {
+                $user->angkatan = $tahunAngkatan;
                 $isUpdated = true;
             }
 
-            if (empty($mahasiswa->fakultas_id)) {
+            // Isi Fakultas, Jurusan, Prodi jika kosong
+            if (empty($user->fakultas_id)) {
                 $fakultas = Fakultas::where('kode_fakultas', $kodeFakultas)->first();
                 if ($fakultas) {
-                    $mahasiswa->fakultas_id = $fakultas->id;
+                    $user->fakultas_id = $fakultas->id;
                     $isUpdated = true;
 
-                    if (empty($mahasiswa->prodi_id)) {
+                    if (empty($user->prodi_id)) {
                         $prodi = Prodi::where('kode_prodi', $kodeProdi)
                             ->whereHas('jurusan', function ($q) use ($fakultas) {
                                 $q->where('fakultas_id', $fakultas->id);
                             })->first();
 
                         if ($prodi) {
-                            $mahasiswa->jurusan_id = $prodi->jurusan_id;
-                            $mahasiswa->prodi_id = $prodi->id;
+                            $user->jurusan_id = $prodi->jurusan_id;
+                            $user->prodi_id = $prodi->id;
                             $isUpdated = true;
                         }
                     }
@@ -55,89 +59,74 @@ class ProfilController extends Controller
         }
 
         if ($isUpdated) {
-            $mahasiswa->save();
+            $user->save();
         }
 
-        // Hitung Persentase Profil
-        $persentaseProfil = 0;
-        $totalField = 8;
-        $fieldTerisi = 3;
+        // ========================================================
+        // 2. HITUNG PERSENTASE PROFIL (Sekarang di tabel Users)
+        // ========================================================
+        $fieldTerisi = 0;
+        $fields = ['name', 'email', 'nim_nip', 'foto_profil', 'jenis_kelamin', 'angkatan', 'fakultas_id', 'prodi_id'];
 
-        if (!empty($mahasiswa->foto_profil)) $fieldTerisi++;
-        if (!empty($mahasiswa->jenis_kelamin)) $fieldTerisi++;
-        if (!empty($mahasiswa->angkatan)) $fieldTerisi++;
-        if (!empty($mahasiswa->fakultas_id)) $fieldTerisi++;
-        if (!empty($mahasiswa->prodi_id)) $fieldTerisi++;
+        foreach ($fields as $f) {
+            if (!empty($user->$f)) $fieldTerisi++;
+        }
+        $persentaseProfil = round(($fieldTerisi / count($fields)) * 100);
 
-        $persentaseProfil = min(round(($fieldTerisi / $totalField) * 100), 100);
-
+        // Data untuk Dropdown
         $fakultas = Fakultas::all();
-        $jurusans = Jurusan::all();
-        $prodis = Prodi::all();
+        $jurusans = Jurusan::where('fakultas_id', $user->fakultas_id)->get();
+        $prodis = Prodi::where('jurusan_id', $user->jurusan_id)->get();
 
-        return view('mahasiswa.profil', compact('user', 'mahasiswa', 'fakultas', 'jurusans', 'prodis', 'persentaseProfil'));
+        return view('mahasiswa.profil', compact('user', 'fakultas', 'jurusans', 'prodis', 'persentaseProfil'));
     }
 
     public function update(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        $mahasiswa = Mahasiswa::where('user_id', $user->id)->first();
 
         $request->validate([
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|max:255|unique:users,email,' . $user->id,
             'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'angkatan'      => 'required|digits:4|integer|min:2000|max:' . (date('Y') + 1),
+            'angkatan'      => 'required|digits:4',
             'fakultas_id'   => 'required|exists:fakultas,id',
             'jurusan_id'    => 'required|exists:jurusan,id',
             'prodi_id'      => 'required|exists:prodi,id',
         ]);
 
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->save();
-
         // ========================================================
-        // LOGIKA FOTO HASIL CROP (BASE64) -> TANPA INTERVENTION IMAGE!
+        // 3. LOGIKA FOTO HASIL CROP (BASE64) - Tetap Dipertahankan
         // ========================================================
         if ($request->filled('foto_base64')) {
-            // 1. Kembalikan spasi menjadi tanda '+'
             $base64Image = str_replace(' ', '+', $request->foto_base64);
-
-            // 2. Pisahkan prefix "data:image/jpeg;base64,"
             $imageParts = explode(";base64,", $base64Image);
 
             if (count($imageParts) == 2) {
-                // 3. Decode teks murni pakai fungsi bawaan PHP
                 $imageDecode = base64_decode($imageParts[1]);
 
-                // Buat folder jika belum ada
-                if (!Storage::disk('public')->exists('profil')) {
-                    Storage::disk('public')->makeDirectory('profil');
-                }
-
                 // Hapus foto lama jika ada
-                if ($mahasiswa->foto_profil && Storage::disk('public')->exists($mahasiswa->foto_profil)) {
-                    Storage::disk('public')->delete($mahasiswa->foto_profil);
+                if ($user->foto_profil && Storage::disk('public')->exists($user->foto_profil)) {
+                    Storage::disk('public')->delete($user->foto_profil);
                 }
 
-                // Siapkan nama file unik
-                $nim = $user->nim_nip ?? 'unknown';
-                $fileName = 'profil/' . $nim . '_' . time() . '.jpg';
-
-                // 4. SIMPAN LANGSUNG PAKAI LARAVEL STORAGE (Sangat Aman & Cepat)
+                $fileName = 'profil/' . $user->nim_nip . '_' . time() . '.jpg';
                 Storage::disk('public')->put($fileName, $imageDecode);
-
-                $mahasiswa->foto_profil = $fileName;
+                $user->foto_profil = $fileName;
             }
         }
 
-        $mahasiswa->jenis_kelamin = $request->jenis_kelamin;
-        $mahasiswa->angkatan      = $request->angkatan;
-        $mahasiswa->fakultas_id   = $request->fakultas_id;
-        $mahasiswa->jurusan_id    = $request->jurusan_id;
-        $mahasiswa->prodi_id      = $request->prodi_id;
-        $mahasiswa->save();
+        // Simpan semua ke tabel USERS
+        $user->update([
+            'name'          => $request->name,
+            'email'         => $request->email,
+            'jenis_kelamin' => $request->jenis_kelamin,
+            'angkatan'      => $request->angkatan,
+            'fakultas_id'   => $request->fakultas_id,
+            'jurusan_id'    => $request->jurusan_id,
+            'prodi_id'      => $request->prodi_id,
+        ]);
 
         return back()->with('success', 'Data profil berhasil diperbarui.');
     }
@@ -149,8 +138,7 @@ class ProfilController extends Controller
             'new_password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $user = User::find(Auth::id());
         $user->password = Hash::make($request->new_password);
         $user->save();
 

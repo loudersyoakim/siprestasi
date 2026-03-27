@@ -13,7 +13,6 @@ use App\Http\Controllers\DaftarMahasiswaController;
 use App\Http\Controllers\StrukturAkademikController;
 use App\Http\Controllers\ManajemenFormController;
 
-
 // =================================================================
 // RUTE PUBLIK & LANDING PAGE
 // =================================================================
@@ -23,242 +22,150 @@ Route::get('/artikel', [LandingController::class, 'indexAll'])->name('artikel.in
 Route::get('/artikel/{slug}', [LandingController::class, 'show'])->name('artikel.show');
 
 // =================================================================
-// RUTE AUTENTIKASI (Sesuai AuthController Manual)
+// RUTE AUTENTIKASI
 // =================================================================
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.store');
-
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->name('register.store');
-
-// Tambahan: Rute Logout agar fungsi logout di AuthController bisa dipanggil
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-
 // =================================================================
-// RUTE SETELAH LOGIN
+// RUTE SISTEM (FULL PERMISSION BASED)
+// Tidak ada lagi pengelompokan berdasarkan Role. Semua berdasarkan FITUR.
 // =================================================================
 Route::middleware(['auth'])->group(function () {
 
     // -------------------------------------------------------------
-    // 1. Group Admin  dan super admin
+    // 1. DASHBOARD AREA (Setiap role punya dashboard yang menyesuaikan)
     // -------------------------------------------------------------
-    Route::middleware(['role:super_admin'])->prefix('super-admin')->name('super_admin')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('.dashboard');
-
-        // Manajemen Akun 
-        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('.manajemen-akun')->group(function () {
-            Route::get('/', 'indexManajemenAkun');
-            Route::get('/create', 'createAkun')->name('.create');
-            Route::post('/', 'storeAkun')->name('.store');
-            Route::get('/{id}/edit', 'editAkun')->name('.edit');
-            Route::put('/{id}', 'updateAkun')->name('.update');
-            Route::delete('/{id}', 'destroyAkun')->name('.destroy');
-            Route::post('/import', 'importAkun')->name('.import');
-            Route::get('/export-template', 'exportFormatAkun')->name('.export-format');
-
-            Route::post('/bulk', 'bulkAction')->name('.bulk');
-            Route::patch('/{id}/aktivasi', 'aktivasiAkun')->name('.aktivasi');
-        });
-
-        Route::controller(StrukturAkademikController::class)->prefix('struktur-akademik')->name('.struktur-akademik')->group(function () {
-            Route::get('/', 'indexStrukturAkademik');
-            Route::post('/fakultas', 'storeFakultas')->name('.fakultas.store');
-            Route::put('/fakultas/{id}', 'updateFakultas')->name('.fakultas.update');
-            Route::delete('/fakultas/{id}', 'destroyFakultas')->name('.fakultas.destroy');
-
-            Route::post('/jurusan', 'storeJurusan')->name('.jurusan.store');
-            Route::put('/jurusan/{id}', 'updateJurusan')->name('.jurusan.update');
-            Route::delete('/jurusan/{id}', 'destroyJurusan')->name('.jurusan.destroy');
-
-            Route::post('/prodi', 'storeProdi')->name('.prodi.store');
-            Route::put('/prodi/{id}', 'updateProdi')->name('.prodi.update');
-            Route::delete('/prodi/{id}', 'destroyProdi')->name('.prodi.destroy');
-        });
-
-        Route::controller(DaftarMahasiswaController::class)->prefix('daftar-mahasiswa')->name('.daftar-mahasiswa')->group(function () {
-            Route::get('/', 'indexDaftarMahasiswa');
-            Route::get('/{id}/edit', 'edit')->name('.edit');
-            Route::put('/{id}', 'update')->name('.update');
-            Route::delete('/{id}', 'destroy')->name('.destroy');
-        });
-
-        Route::controller(ManajemenFormController::class)->prefix('manajemen-form')->name('.manajemen-form')->group(function () {
-            Route::get('/', 'indexManajemenForm');
-            Route::post('/', 'store')->name('.store');
-            Route::get('/{id}/edit', 'edit')->name('.edit');
-            Route::put('/{id}', 'update')->name('.update');
-            Route::delete('/{id}', 'destroy')->name('.destroy');
-
-            Route::post('/{id}/atur', 'storeField')->name('.storeField');
-            Route::get('/{id}/atur', 'show')->name('.show');
-
-            Route::put('/field/{id}', 'updateField')->name('.updateField');
-            Route::delete('/field/{id}', 'destroyField')->name('.destroyField');
-        });
-    });
-
-    Route::middleware(['role:admin'])->prefix('admin')->name('admin')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'superAdminDashboard'])->name('.dashboard');
-
-
-        // Manajemen Akun 
-        Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')->name('.manajemen-akun')->group(function () {
-            Route::get('/', 'indexManajemenAkun');
-            Route::get('/create', 'createAkun')->name('.create');
-            Route::post('/', 'storeAkun')->name('.store');
-            Route::get('/{id}/edit', 'editAkun')->name('.edit');
-            Route::put('/{id}', 'updateAkun')->name('.update');
-            Route::delete('/{id}', 'destroyAkun')->name('.destroy');
-            Route::post('/import', 'importAkun')->name('.import');
-            Route::get('/export-template', 'exportFormatAkun')->name('.export-format');
-
-            Route::post('/bulk', 'bulkAction')->name('super_admin.manajemen-akun.bulk');
-        });
-
-        // Manajemen Konten
-        Route::controller(ManajemenKontenController::class)->prefix('manajemen-konten')->name('.manajemen-konten')->group(function () {
-            Route::get('/', 'indexManajemenKonten');
-            Route::get('/create', 'createKonten')->name('.create');
-            Route::post('/', 'storeKonten')->name('.store');
-            Route::get('/{id}/edit', 'editKonten')->name('.edit');
-            Route::put('/{id}', 'updateKonten')->name('.update');
-            Route::delete('/{id}', 'destroyKonten')->name('.destroy');
-        });
-
-        // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('.prestasi')->group(function () {
-            Route::get('/', 'indexPrestasi');
-            Route::get('/create', 'createPrestasi')->name('.create');
-            Route::post('/', 'storePrestasi')->name('.store');
-            Route::get('/{id}/detail', 'showPrestasi')->name('.show');
-            Route::get('/{id}/edit', 'editPrestasi')->name('.edit');
-            Route::put('/{id}', 'updatePrestasi')->name('.update');
-            Route::delete('/{id}', 'destroyPrestasi')->name('.destroy');
-
-            Route::get('/validasi', 'validasiPrestasi')->name('.validasi');
-            Route::patch('/validasi/{id}', 'updateStatusPrestasi')->name('.status-update');
-            Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
-
-            Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown'); // Diperbaiki dari takedowm
-            Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
-        });
-
-        // Master Data 
-        Route::controller(MasterDataController::class)->prefix('master-data')->name('.master-data')->group(function () {
-            Route::get('/', 'indexMasterData');
-
-            // Fakultas, Jurusan, Prodi
-            Route::get('/fakultas', 'masterDataFakultas')->name('.fakultas');
-            Route::post('/fakultas', 'storeFakultas')->name('.fakultas.store');
-            Route::put('/fakultas/{id}', 'updateFakultas')->name('.fakultas.update');
-            Route::delete('/fakultas/{id}', 'destroyFakultas')->name('.fakultas.destroy');
-
-            Route::get('/jurusan', 'masterDataJurusan')->name('.jurusan');
-            Route::post('/jurusan', 'storeJurusan')->name('.jurusan.store');
-            Route::put('/jurusan/{id}', 'updateJurusan')->name('.jurusan.update');
-            Route::delete('/jurusan/{id}', 'destroyJurusan')->name('.jurusan.destroy');
-
-            Route::get('/prodi', 'masterDataProdi')->name('.prodi');
-            Route::post('/prodi', 'storeProdi')->name('.prodi.store');
-            Route::put('/prodi/{id}', 'updateProdi')->name('.prodi.update');
-            Route::delete('/prodi/{id}', 'destroyProdi')->name('.prodi.destroy');
-
-            // STA 
-            Route::get('/sta', 'masterDataSTA')->name('.sta');
-            Route::post('/tahun-akademik/update/{id}', 'updateTahunAkademik')->name('.tahun.update');
-            Route::post('/template-surat/update/{id}', 'updateTemplateSurat')->name('.template.update');
-
-            // Atribut Prestasi
-            Route::get('/atribut-prestasi', 'masterDataAtributPrestasi')->name('.atribut-prestasi');
-            Route::post('/jenis', 'storeJenis')->name('.jenis.store');
-            Route::put('/jenis/{id}', 'updateJenis')->name('.jenis.update');
-            Route::delete('/jenis/{id}', 'destroyJenis')->name('.jenis.destroy');
-            Route::post('/kategori', 'storeKategori')->name('.kategori.store');
-            Route::put('/kategori/{id}', 'updateKategori')->name('.kategori.update');
-            Route::delete('/kategori/{id}', 'destroyKategori')->name('.kategori.destroy');
-            Route::post('/tingkat', 'storeTingkat')->name('.tingkat.store');
-            Route::put('/tingkat/{id}', 'updateTingkat')->name('.tingkat.update');
-            Route::delete('/tingkat/{id}', 'destroyTingkat')->name('.tingkat.destroy');
-        });
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/global', [DashboardController::class, 'superAdminDashboard'])->middleware('permission:dashboard.view_global')->name('super_admin.dashboard');
+        Route::get('/admin', [DashboardController::class, 'superAdminDashboard'])->middleware('permission:dashboard.view_global')->name('admin.dashboard');
+        Route::get('/fakultas', [DashboardController::class, 'wdDashboard'])->middleware('permission:dashboard.view_fakultas')->name('fakultas.dashboard');
+        Route::get('/jurusan', [DashboardController::class, 'kajurDashboard'])->middleware('permission:dashboard.view_jurusan')->name('jurusan.dashboard');
+        Route::get('/pribadi', [DashboardController::class, 'mahasiswaDashboard'])->middleware('permission:dashboard.view_pribadi')->name('mahasiswa.dashboard');
     });
 
     // -------------------------------------------------------------
-    // 2. Group Mahasiswa 
+    // 2. PROFIL AKUN
     // -------------------------------------------------------------
-    Route::middleware(['role:mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'mahasiswaDashboard'])->name('dashboard');
-
-        Route::controller(ProfilController::class)->prefix('profil')->name('profil')->group(function () {
-            Route::get('/', 'indexProfil');
-            Route::post('/update', 'update')->name('.update');
-            Route::put('/update-password', 'updatePassword')->name('.update-password');
-        });
-
-        // Prestasi 
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('prestasi')->group(function () {
-            Route::get('/', 'indexPrestasiMahasiswa');
-            Route::get('/create', 'createMahasiswa')->name('.create');
-            Route::post('/', 'storeMahasiswa')->name('.store');
-            Route::get('/{id}/edit', 'editMahasiswa')->name('.edit');
-            Route::put('/{id}', 'updateMahasiswa')->name('.update');
-            Route::delete('/{id}', 'destroyMahasiswa')->name('.destroy');
-            Route::get('/{id}', 'showMahasiswa')->name('.show');
-        });
+    Route::controller(ProfilController::class)->prefix('profil')->group(function () {
+        Route::get('/', 'indexProfil')->name('mahasiswa.profil');
+        Route::post('/update', 'update')->name('profil.update');
+        Route::put('/update-password', 'updatePassword')->name('profil.update-password');
     });
 
     // -------------------------------------------------------------
-    // 3. Group Wakil Dekan (Disesuaikan dari wd menjadi wakil_dekan)
+    // 3. MANAJEMEN PENGGUNA (AKUN)
     // -------------------------------------------------------------
-    Route::middleware(['role:wakil_dekan'])->prefix('wakil-dekan')->name('wakil_dekan.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'wdDashboard'])->name('dashboard');
+    Route::controller(ManajemenAkunController::class)->prefix('manajemen-akun')
+        ->middleware('permission:akun.view_list')->group(function () {
 
-        // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('prestasi')->group(function () {
-            Route::get('/', 'indexPrestasi');
-            Route::get('/create', 'createPrestasi')->name('.create');
-            Route::post('/', 'storePrestasi')->name('.store');
-            Route::get('/{id}/detail', 'showPrestasi')->name('.show');
-            Route::get('/{id}/edit', 'editPrestasi')->name('.edit');
-            Route::put('/{id}', 'updatePrestasi')->name('.update');
-            Route::delete('/{id}', 'destroyPrestasi')->name('.destroy');
+            // Nama route ini dipertahankan agar Sidebar otomatis tidak error
+            Route::get('/', 'indexManajemenAkun')->name('super_admin.manajemen-akun');
+            Route::get('/data', 'indexManajemenAkun')->name('admin.manajemen-akun');
 
-            Route::get('/validasi', 'validasiPrestasi')->name('.validasi');
-            Route::patch('/validasi/{id}', 'updateStatusPrestasi')->name('.status-update');
-            Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
-
-            Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown');
-            Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
+            // Aksi CRUD Akun (Semua user yang punya izin 'akun.view_list' bisa akses)
+            Route::get('/create', 'createAkun')->name('akun.create');
+            Route::post('/', 'storeAkun')->name('akun.store');
+            Route::get('/{id}/edit', 'editAkun')->name('akun.edit');
+            Route::put('/{id}', 'updateAkun')->name('akun.update');
+            Route::delete('/{id}', 'destroyAkun')->name('akun.destroy');
+            Route::post('/import', 'importAkun')->name('akun.import');
+            Route::get('/export-template', 'exportFormatAkun')->name('akun.export-format');
+            Route::post('/bulk', 'bulkAction')->name('akun.bulk');
+            Route::patch('/{id}/aktivasi', 'aktivasiAkun')->name('akun.aktivasi');
         });
+
+    // -------------------------------------------------------------
+    // 4. MODUL PRESTASI (Inti Sistem)
+    // -------------------------------------------------------------
+    Route::controller(PrestasiController::class)->prefix('prestasi')->group(function () {
+
+        // Izin Lapor Prestasi Baru (Untuk Mahasiswa atau Admin yang menginput)
+        Route::middleware('permission:prestasi.create')->group(function () {
+            Route::get('/lapor', 'createMahasiswa')->name('mahasiswa.prestasi.create');
+            Route::post('/lapor', 'storeMahasiswa')->name('mahasiswa.prestasi.store');
+        });
+
+        // Izin Melihat Daftar Prestasi Pribadi (Mahasiswa)
+        Route::get('/riwayat', 'indexPrestasiMahasiswa')
+            ->middleware('permission:prestasi.view_own')
+            ->name('mahasiswa.prestasi');
+
+        // Izin Melihat Semua Data Prestasi (Admin, Kajur, Dekan)
+        Route::middleware('permission:prestasi.view_all')->group(function () {
+            Route::get('/semua', 'indexPrestasi')->name('super_admin.prestasi');
+            Route::get('/semua/admin', 'indexPrestasi')->name('admin.prestasi');
+            Route::get('/semua/fakultas', 'indexPrestasi')->name('fakultas.prestasi');
+            Route::get('/semua/jurusan', 'indexPrestasi')->name('jurusan.prestasi');
+            Route::get('/laporan/rekap', 'laporanRekap')->name('prestasi.laporan-rekap');
+        });
+
+        // Izin Validasi Prestasi (Kajur, Dekan, Admin)
+        Route::middleware('permission:prestasi.validate')->group(function () {
+            Route::get('/antrean-validasi', 'validasiPrestasi')->name('prestasi.validasi');
+            Route::patch('/validasi/{id}', 'updateStatusPrestasi')->name('prestasi.status-update');
+        });
+
+        // Aksi Detail & Edit Prestasi (Secara otomatis di-handle Controller berdasarkan kepemilikan)
+        Route::get('/{id}/detail', 'showPrestasi')->name('prestasi.show');
+        Route::get('/{id}/edit', 'editMahasiswa')->name('prestasi.edit');
+        Route::put('/{id}', 'updateMahasiswa')->name('prestasi.update');
+        Route::delete('/{id}', 'destroyMahasiswa')->name('prestasi.destroy');
     });
 
     // -------------------------------------------------------------
-    // 4. Group Jurusan (Disesuaikan dari kajur menjadi jurusan)
+    // 5. MASTER DATA & STRUKTUR AKADEMIK
     // -------------------------------------------------------------
-    Route::middleware(['role:jurusan'])->prefix('jurusan')->name('jurusan.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'kajurDashboard'])->name('dashboard');
+    Route::controller(StrukturAkademikController::class)->prefix('master/struktur-akademik')
+        ->middleware('permission:master.akademik')->group(function () {
 
-        // Prestasi
-        Route::controller(PrestasiController::class)->prefix('prestasi')->name('prestasi')->group(function () {
-            Route::get('/', 'indexPrestasi');
-            Route::get('/create', 'createPrestasi')->name('.create');
-            Route::post('/', 'storePrestasi')->name('.store');
-            Route::get('/{id}/detail', 'showPrestasi')->name('.show');
-            Route::get('/{id}/edit', 'editPrestasi')->name('.edit');
-            Route::put('/{id}', 'updatePrestasi')->name('.update');
-            Route::delete('/{id}', 'destroyPrestasi')->name('.destroy');
+            Route::get('/', 'indexStrukturAkademik')->name('super_admin.struktur-akademik');
 
-            Route::get('/validasi', 'validasiPrestasi')->name('.validasi');
-            Route::patch('/validasi/{id}', 'updateStatusPrestasi')->name('.status-update');
-            Route::patch('/validasi-massal', 'validasiMassal')->name('.validasi-massal');
-
-            Route::patch('/{id}/publish', 'publishPrestasi')->name('.publish');
-            Route::patch('/{id}/takedown', 'takeDownPrestasi')->name('.takedown');
-            Route::get('/laporan-rekap', 'laporanRekap')->name('.laporan-rekap');
+            Route::post('/fakultas', 'storeFakultas')->name('fakultas.store');
+            Route::put('/fakultas/{id}', 'updateFakultas')->name('fakultas.update');
+            Route::delete('/fakultas/{id}', 'destroyFakultas')->name('fakultas.destroy');
+            Route::post('/jurusan', 'storeJurusan')->name('jurusan.store');
+            Route::put('/jurusan/{id}', 'updateJurusan')->name('jurusan.update');
+            Route::delete('/jurusan/{id}', 'destroyJurusan')->name('jurusan.destroy');
+            Route::post('/prodi', 'storeProdi')->name('prodi.store');
+            Route::put('/prodi/{id}', 'updateProdi')->name('prodi.update');
+            Route::delete('/prodi/{id}', 'destroyProdi')->name('prodi.destroy');
         });
-    });
+
+    // -------------------------------------------------------------
+    // 6. MANAJEMEN FORM BUILDER (Kategori Penilaian)
+    // -------------------------------------------------------------
+    Route::controller(ManajemenFormController::class)->prefix('pengaturan/form-prestasi')
+        ->middleware('permission:prestasi.config_form')->group(function () {
+
+            Route::get('/', 'indexManajemenForm')->name('super_admin.manajemen-form');
+            Route::post('/', 'store')->name('form.store');
+            Route::get('/{id}/edit', 'edit')->name('form.edit');
+            Route::put('/{id}', 'update')->name('form.update');
+            Route::delete('/{id}', 'destroy')->name('form.destroy');
+
+            Route::post('/{id}/atur', 'storeField')->name('form.storeField');
+            Route::get('/{id}/atur', 'show')->name('form.show');
+            Route::put('/field/{id}', 'updateField')->name('form.updateField');
+            Route::delete('/field/{id}', 'destroyField')->name('form.destroyField');
+        });
+
+    // -------------------------------------------------------------
+    // 7. MADING DIGITAL & KONTEN PUBLIKASI
+    // -------------------------------------------------------------
+    Route::controller(ManajemenKontenController::class)->prefix('mading-digital')
+        ->middleware('permission:konten.manage_artikel')->group(function () {
+
+            Route::get('/', 'indexManajemenKonten')->name('konten.index');
+            Route::get('/create', 'createKonten')->name('konten.create');
+            Route::post('/', 'storeKonten')->name('konten.store');
+            Route::get('/{id}/edit', 'editKonten')->name('konten.edit');
+            Route::put('/{id}', 'updateKonten')->name('konten.update');
+            Route::delete('/{id}', 'destroyKonten')->name('konten.destroy');
+        });
 });
 
 require __DIR__ . '/settings.php';

@@ -36,8 +36,13 @@
             {{-- ========================================================= --}}
 
             <div class="flex flex-col items-center text-center mb-8">
+                @php
+                    $appName = $pengaturan['nama_aplikasi'] ?? '';
+                    $firstPart = substr($appName, 0, 2);
+                    $lastPart = substr($appName, 2);
+                @endphp
                 <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">
-                    SI<span class="text-[#006633]">PRESTASI</span>
+                    {{ $firstPart }}<span class="text-[#006633]">{{ $lastPart }}</span>
                 </h1>
                 <p class="text-xs text-gray-500 mt-1.5 font-medium uppercase tracking-widest">LOGIN</p>
             </div>

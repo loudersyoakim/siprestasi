@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Tambahkan ini untuk mengecek pengaturan
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
 {
+
     public function showLogin()
     {
-        return view('auth.login');
+        $pengaturan = DB::table('pengaturan_sistem')->pluck('nilai', 'kunci')->toArray();
+        return view('auth.login', compact('pengaturan'));
     }
+
 
     public function login(Request $request)
     {
@@ -23,46 +27,58 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Mencari user berdasarkan NIM/NIP atau Email
         $user = User::where('nim_nip', $request->email)
             ->orWhere('email', $request->email)
             ->first();
 
+        // 1. Cek keberadaan user
         if (!$user) {
             return back()->withErrors([
                 'email' => 'Akun tidak ditemukan.',
             ])->onlyInput('email');
         }
 
+        // 2. Cek password
         if (!Hash::check($request->password, $user->password)) {
-            // KIRIM KE PASSWORD
             return back()->withErrors([
                 'password' => 'Kata sandi yang Anda masukkan salah.',
             ])->onlyInput('email');
         }
 
-        // ==========================================
-        // CEK STATUS AKTIVASI SEBELUM LOGIN
-        // ==========================================
+        // 3. Cek status aktivasi (is_active)
         if (isset($user->is_active) && $user->is_active == 0) {
-            // Tolak akses login dan kirim pesan untuk trigger popup di view
             return redirect()->route('login')
                 ->with('aktivasi_pending', true)
-                ->onlyInput('email');
+                ->withInput();
         }
 
+        // 4. Proses Login
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect()->route($user->role . '.dashboard');
+        // 5. Penentuan rute berdasarkan kode_role (SA, AD, FK, JR, MHS)
+        // Ini adalah perbaikan untuk error "RouteNotFoundException" kamu
+        $role = $user->role->kode_role;
+
+        $routeName = match ($role) {
+            'SA'  => 'super_admin.dashboard',
+            'AD'  => 'admin.dashboard',
+            'FK'  => 'fakultas.dashboard',
+            'JR'  => 'jurusan.dashboard',
+            'MHS' => 'mahasiswa.dashboard',
+            default => 'home'
+        };
+
+        return redirect()->route($routeName);
     }
 
-    // 3. TAMPILKAN HALAMAN REGISTER
     public function showRegister()
     {
-        return view('auth.register');
+        $pengaturan = DB::table('pengaturan_sistem')->pluck('nilai', 'kunci')->toArray();
+        return view('auth.register', compact('pengaturan'));
     }
 
-    // 4. PROSES REGISTER
     public function register(Request $request)
     {
         $request->validate([
@@ -72,40 +88,36 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // ==========================================
-        // CEK PENGATURAN MASTER "WAJIB AKTIVASI"
-        // ==========================================
+        // Ambil pengaturan "Wajib Aktivasi" dari database
         $wajibAktivasi = DB::table('pengaturan_sistem')
             ->where('kunci', 'wajib_aktivasi_mahasiswa')
             ->value('nilai') ?? '0';
 
-        // Jika bernilai '1' (Wajib), set is_active = 0. Jika '0' (Tidak wajib), set 1.
         $isActive = ($wajibAktivasi === '1') ? 0 : 1;
+
+        // Ambil ID Role untuk Mahasiswa (MHS)
+        $roleMhs = Role::where('kode_role', 'MHS')->first();
 
         $user = User::create([
             'name' => $request->name,
             'nim_nip' => $request->nim_nip,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'mahasiswa',
-            'is_active' => $isActive, // Simpan status
+            'role_id' => $roleMhs->id, // Menggunakan role_id sesuai struktur baru
+            'is_active' => $isActive,
         ]);
 
-        // ==========================================
-        // PERCABANGAN ARAH SETELAH REGISTRASI
-        // ==========================================
         if ($isActive === 0) {
-            // Jika butuh aktivasi: JANGAN loginkan. Lempar ke halaman login + trigger popup.
+            // Jika butuh aktivasi, jangan login otomatis
             return redirect()->route('login')->with('aktivasi_pending', true);
         } else {
-            // Jika otomatis aktif: Loginkan dan lempar ke Dashboard
+            // Jika otomatis aktif, login dan arahkan ke dashboard
             Auth::login($user);
             $request->session()->regenerate();
-            return redirect()->route('mahasiswa.dashboard')->with('status', 'Registrasi berhasil! Selamat datang.');
+            return redirect()->route('mahasiswa.dashboard')->with('status', 'Registrasi berhasil!');
         }
     }
 
-    // 5. PROSES LOGOUT
     public function logout(Request $request)
     {
         Auth::logout();

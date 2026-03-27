@@ -4,7 +4,6 @@
 <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
     <div>
         <h3 class="text-2xl font-black text-gray-800 tracking-tight">Beranda Dashboard</h3>
-        <p class="text-sm text-gray-500 mt-1 font-medium">Ringkasan aktivitas dan statistik SIARPRESTASI.</p>
     </div>
     <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
         <i class="bi bi-calendar3 text-[#006633]"></i>
@@ -22,7 +21,7 @@
         <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Mahasiswa</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-tight min-h-[28px] flex items-start">Total Mahasiswa</p>
                 <h4 class="text-3xl font-black text-gray-800">{{ number_format($totalMahasiswa ?? 0) }}</h4>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-inner">
@@ -39,7 +38,7 @@
         <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Prestasi</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-tight min-h-[28px] flex items-start">Total Prestasi</p>
                 <h4 class="text-3xl font-black text-gray-800">{{ number_format($totalPrestasi ?? 0) }}</h4>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center text-xl shadow-inner">
@@ -56,7 +55,7 @@
         <div class="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Butuh Validasi</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-tight min-h-[28px] flex items-start">Butuh Validasi</p>
                 <h4 class="text-3xl font-black text-gray-800">{{ number_format($prestasiPending ?? 0) }}</h4>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center text-xl shadow-inner">
@@ -73,7 +72,7 @@
         <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Antrean Surat</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-tight min-h-[28px] flex items-start">Antrean Surat</p>
                 <h4 class="text-3xl font-black text-gray-800">{{ number_format($suratPending ?? 0) }}</h4>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl shadow-inner">

@@ -8,8 +8,7 @@
     </div>
 
     @php
-        // Mengambil data dari controller, atau fallback ke default jika Admin belum setting
-        $kontak_admin = $pengaturan['kontak_wa'] ?? null;
+        $kontak_admin = $pengaturan['kontak_telepon'] ?? null;
         $pesan_bantuan = $pengaturan['pesan_bantuan'] ?? 'Jam operasional Admin: Senin-Jumat (08:00 - 16:00 WIB).';
     @endphp
 

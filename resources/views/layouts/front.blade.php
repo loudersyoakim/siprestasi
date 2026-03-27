@@ -4,18 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'SIARPRESTASI - Universitas Negeri Medan')</title>
+    <title>@yield('title', ($pengaturan['nama_aplikasi'] ?? 'SIARPRESTASI') . ' - Universitas Negeri Medan')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 
@@ -23,12 +17,13 @@
     {{-- NAVIGATION (Selalu Hijau) --}}
     <nav id="mainNav" class="fixed top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center transition-all duration-500 ease-in-out bg-[#006633] text-white shadow-md">
         <div class="flex items-center gap-3">
-            <img src="{{ asset('img/logo-unimed.png') }}" alt="Logo" class="h-10 w-auto transition-all duration-500" id="navLogo">
+            <img src="{{ !empty($pengaturan['logo_aplikasi']) ? asset('img/' . $pengaturan['logo_aplikasi']) : asset('img/logo-unimed.png') }}" alt="Logo" class="h-10 w-auto transition-all duration-500" id="navLogo">
             <div class="border-l border-white/20 pl-3">
-                <h2 id="navTitle" class="font-black text-sm lg:text-base tracking-tight leading-none uppercase transition-all duration-500">Universitas Negeri Medan</h2>
+                <h2 id="navTitle" class="font-black text-sm lg:text-base tracking-tight leading-none uppercase transition-all duration-500">{{$pengaturan['nama_universitas'] ?? 'Universitas Negeri Medan' }}</h2>
                 <p id="navTagline" class="text-[7px] uppercase tracking-widest text-white/60 transition-all duration-500 overflow-hidden opacity-100 max-h-4">The Character Building University</p>
             </div>
         </div>
+        
         
         {{-- Menu Desktop --}}
         <div class="hidden md:flex items-center gap-10">
@@ -52,7 +47,7 @@
             <span class="w-6 h-0.5 bg-white transition-all duration-300 origin-center"></span>
         </button>
 
-        {{-- INI YANG KURANG: Pop-up Menu Mobile --}}
+        {{-- Pop-up Menu Mobile --}}
         <div id="mobileMenu" class="fixed top-0 right-0 w-64 h-screen bg-[#00552b] shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-40 flex flex-col pt-24 px-6 gap-6 md:hidden">
             <a href="/" class="mobile-link text-white font-bold text-sm tracking-widest uppercase border-b border-white/10 pb-4 {{ request()->is('/') ? 'text-yellow-400' : '' }}">BERANDA</a>
             <a href="{{ route('artikel.index') }}" class="mobile-link text-white font-bold text-sm tracking-widest uppercase border-b border-white/10 pb-4 {{ request()->is('artikel*') ? 'text-yellow-400' : '' }}">ARTIKEL</a>
@@ -71,9 +66,9 @@
             <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-12">
                 <div class="md:col-span-7">
                     <div class="flex items-center gap-3 mb-6">
-                        <img src="{{ asset('img/logo-unimed.png') }}" alt="Logo" class="h-12 w-auto">
+                        <img src="{{ !empty($pengaturan['logo_aplikasi']) ? asset('img/' . $pengaturan['logo_aplikasi']) : asset('img/logo-unimed.png') }}" alt="Logo" class="h-12 w-auto">
                         <div class="border-l border-white/50 pl-4">
-                            <h2 class="font-black text-xl tracking leading-none uppercase">Universitas Negeri Medan</h2>
+                            <h2 class="font-black text-xl tracking leading-none uppercase">{{ $pengaturan['nama_aplikasi'] ?? 'Universitas Negeri Medan' }}</h2>
                             <p class="text-[9px] uppercase tracking-[0.2em] text-white/70">The Character Building University</p>
                         </div>
                     </div>
@@ -84,19 +79,34 @@
                 <div class="md:col-span-3">
                     <h3 class="font-bold text-lg mb-6 relative inline-block">Hubungi Kami<span class="absolute -bottom-2 left-0 w-8 h-1 bg-yellow-400 rounded-full"></span></h3>
                     <div class="space-y-4">
+                        
+                        {{-- Telepon Dinamis --}}
+                        @if(isset($pengaturan['kontak_telepon']))
                         <div class="flex items-center gap-4 group">
                             <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all"><i class="bi bi-telephone"></i></div>
                             <div>
                                 <p class="text-[10px] uppercase text-white/50 font-bold">Telepon Kantor</p>
-                                <p class="font-bold">(061) 6613365</p>
+                                <p class="font-bold">{{ $pengaturan['kontak_telepon'] }}</p>
                             </div>
                         </div>
+                        @endif
+
+                        {{-- Email Dinamis --}}
+                        @if(isset($pengaturan['email_kampus']))
+                        <div class="flex items-center gap-4 group mt-4">
+                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all"><i class="bi bi-envelope"></i></div>
+                            <div>
+                                <p class="text-[10px] uppercase text-white/50 font-bold">Email Resmi</p>
+                                <p class="font-bold text-sm">{{ $pengaturan['email_kampus'] }}</p>
+                            </div>
+                        </div>
+                        @endif
+
                     </div>
                 </div>
             </div>
             <div class="pt-8 border-t border-white/10 text-center">
-                <p class="text-xs text-white/50">&copy; {{ date('Y') }} <span class="text-white font-bold">Universitas Negeri Medan</span>.</p>
-            </div>
+                <p class="text-xs text-white/50">&copy; {{ date('Y') }} <span class="text-white font-bold">{{ $pengaturan['nama_aplikasi'] ?? '' }} - {{ $pengaturan['nama_universitas'] ?? 'Universitas Negeri Medan' }}. </span> </p></div>
         </div>
     </footer>
 
@@ -117,7 +127,6 @@
                 if (!nav) return;
                 
                 if (window.scrollY > 50) {
-                    // Saat discroll turun: padding mengecil, logo mengecil, tagline hilang
                     nav.classList.replace("py-4", "py-2");
                     nav.classList.add("shadow-xl");
                     if (logo) logo.classList.replace("h-10", "h-8");
@@ -127,7 +136,6 @@
                         tagline.classList.add("opacity-0", "max-h-0");
                     }
                 } else {
-                    // Saat di paling atas: kembali ke ukuran normal
                     nav.classList.replace("py-2", "py-4");
                     nav.classList.remove("shadow-xl");
                     if (logo) logo.classList.replace("h-8", "h-10");
@@ -145,14 +153,12 @@
                 const isOpen = !mobileMenu.classList.contains("translate-x-full");
                 
                 if (isOpen || forceClose) {
-                    // Tutup Menu
                     mobileMenu.classList.add("translate-x-full");
                     spans[0].style.transform = "none";
                     spans[1].style.opacity = "1";
                     spans[2].style.transform = "none";
                     document.body.classList.remove("overflow-hidden");
                 } else {
-                    // Buka Menu (Buat logo X)
                     mobileMenu.classList.remove("translate-x-full");
                     spans[0].style.transform = "translateY(8px) rotate(45deg)";
                     spans[1].style.opacity = "0";
@@ -166,7 +172,6 @@
                 toggleMenu();
             });
 
-            // Tutup menu jika klik di luar
             document.addEventListener("click", (e) => {
                 if (mobileMenu && !mobileMenu.classList.contains("translate-x-full") && !mobileMenu.contains(e.target) && !menuBtn.contains(e.target)) {
                     toggleMenu(true);

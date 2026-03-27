@@ -2,23 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Jurusan extends Model
 {
-    use HasFactory;
-
     protected $table = 'jurusan';
-    protected $fillable = ['fakultas_id', 'nama_jurusan'];
+    protected $guarded = ['id'];
 
     public function fakultas()
     {
-        return $this->belongsTo(Fakultas::class, 'fakultas_id');
+        return $this->belongsTo(Fakultas::class);
     }
 
-    public function prodi()
+    public function prodis()
     {
-        return $this->hasMany(Prodi::class, 'jurusan_id');
+        return $this->hasMany(Prodi::class);
     }
 }
