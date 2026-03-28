@@ -9,7 +9,7 @@ class Prestasi extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'data_dinamis' => 'array', // Otomatis convert JSON jadi Array di PHP
+        'data_dinamis' => 'array',
     ];
 
     public function user()

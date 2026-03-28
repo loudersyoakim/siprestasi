@@ -60,6 +60,11 @@ class PengaturanSeeder extends Seeder
                 'nilai' => 'Prestasi',
                 'deskripsi' => 'Judul utama landing page baris 2 (berwarna hijau).'
             ],
+            [
+                'kunci' => 'hero_title_3',
+                'nilai' => 'Mahasiswa',
+                'deskripsi' => 'Judul utama landing page baris 3.'
+            ],
         ];
 
         foreach ($pengaturan as $item) {

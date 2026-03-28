@@ -187,18 +187,29 @@ class ManajemenAkunController extends Controller
     {
         $request->validate([
             'ids' => 'required|array',
-            'bulk_action' => 'required|in:activate,delete'
+            'bulk_action' => 'required|in:activate,deactivate,delete' // FIX: Tambah deactivate
         ]);
 
         $ids = $request->ids;
+        $saRoleId = Role::where('kode_role', 'SA')->value('id');
 
+        // AKSI 1: AKTIVASI MASSAL
         if ($request->bulk_action === 'activate') {
             User::whereIn('id', $ids)->update(['is_active' => 1]);
             return back()->with('success', count($ids) . ' akun berhasil diaktivasi!');
         }
 
+        // AKSI 2: NONAKTIFKAN MASSAL
+        if ($request->bulk_action === 'deactivate') {
+            User::whereIn('id', $ids)
+                ->where('id', '!=', Auth::id()) // Cegah nonaktifkan akun sendiri
+                ->where('role_id', '!=', $saRoleId) // Cegah nonaktifkan Super Admin
+                ->update(['is_active' => 0]);
+
+            return back()->with('success', count($ids) . ' akun berhasil dinonaktifkan (dikembalikan ke status Pending)!');
+        }
+
         if ($request->bulk_action === 'delete') {
-            $saRoleId = Role::where('kode_role', 'SA')->value('id');
             User::whereIn('id', $ids)
                 ->where('id', '!=', Auth::id())
                 ->where('role_id', '!=', $saRoleId)
@@ -206,6 +217,7 @@ class ManajemenAkunController extends Controller
             return back()->with('success', count($ids) . ' akun berhasil dihapus!');
         }
     }
+
 
     public function importAkun(Request $request)
     {

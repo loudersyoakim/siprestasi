@@ -5,140 +5,411 @@ namespace App\Http\Controllers;
 use App\Models\Prestasi;
 use App\Models\FormPrestasi;
 use App\Models\FieldFormPrestasi;
-use App\Models\Konten;
 use App\Models\User;
+use App\Models\AlurPersetujuan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class PrestasiController extends Controller
 {
-    // =============================================================
-    // BAGIAN 1: SISI MAHASISWA (Penyederhanaan dari Kode Lama)
-    // =============================================================
-
-    public function indexPrestasiMahasiswa(Request $request)
+    public function indexPrestasi(Request $request)
     {
-        $userId = Auth::id();
-        $query = Prestasi::with(['formPrestasi'])->where('user_id', $userId);
+        $query = Prestasi::with(['user', 'formPrestasi', 'anggota']);
 
         if ($request->filled('search')) {
-            $query->where('cerita_kegiatan', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                    ->orWhere('data_dinamis', 'like', "%{$search}%");
+            });
         }
 
-        $prestasi = $query->latest()->paginate(10);
-        return view('mahasiswa.prestasi', compact('prestasi'));
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $dynamicFields = collect();
+        if ($request->filled('form_id')) {
+            $query->where('form_prestasi_id', $request->form_id);
+            $selectedForm = FormPrestasi::with(['fields' => function ($q) {
+                $q->orderBy('urutan', 'asc');
+            }])->find($request->form_id);
+
+            if ($selectedForm) {
+                $dynamicFields = $selectedForm->fields->where('tipe', '!=', 'anggota_kelompok');
+            }
+        }
+
+        $prestasi = $query->latest()->paginate(10)->withQueryString();
+        $listForm = FormPrestasi::where('is_active', true)->get();
+
+        return view('prestasi.index_all', compact('prestasi', 'listForm', 'dynamicFields'));
     }
 
-    public function createMahasiswa()
+    public function create(Request $request)
     {
-        $categories = FormPrestasi::where('is_active', true)->get();
-        return view('mahasiswa.prestasi-create', compact('categories'));
+        $forms = FormPrestasi::where('is_active', true)->get();
+        $selectedForm = null;
+
+        if ($request->filled('form_id')) {
+            $selectedForm = FormPrestasi::with(['fields' => function ($q) {
+                $q->orderBy('urutan', 'asc');
+            }])->findOrFail($request->form_id);
+        }
+
+        $mahasiswa = User::whereHas('role', fn($q) => $q->where('kode_role', 'MHS'))->get();
+        return view('prestasi.create', compact('forms', 'selectedForm', 'mahasiswa'));
     }
 
-    public function storeMahasiswa(Request $request)
+    public function store(Request $request)
     {
-        // Validasi dasar (Data dinamis divalidasi manual atau via JSON)
-        $request->validate([
+        $formId = $request->form_prestasi_id;
+        $fields = FieldFormPrestasi::where('form_prestasi_id', $formId)->get();
+
+        $rules = [
             'form_prestasi_id' => 'required|exists:form_prestasis,id',
-            'file_sertifikat'  => 'required|file|mimes:pdf,jpg,png|max:2048',
-            'foto_kegiatan'    => 'nullable|image|max:2048',
-        ]);
+            'user_ids'         => 'required|array|min:1',
+        ];
 
-        // 1. Upload File
-        $pathSertifikat = $request->file('file_sertifikat')->store('sertifikats', 'public');
-        $pathFoto = $request->hasFile('foto_kegiatan') ? $request->file('foto_kegiatan')->store('kegiatan', 'public') : null;
+        foreach ($fields as $field) {
+            if ($field->tipe === 'anggota_kelompok') continue;
 
-        // 2. Tangkap semua inputan dinamis (Kecuali field sistem)
-        $dataIsian = $request->except(['_token', 'form_prestasi_id', 'file_sertifikat', 'foto_kegiatan', 'cerita_kegiatan']);
+            if ($field->is_required && $field->tipe !== 'file') {
+                $rules['field_' . $field->id] = 'required';
+            }
+            if ($field->tipe === 'file') {
+                $rules['field_' . $field->id] = $field->is_required ? 'required|file|max:10240' : 'nullable|file|max:10240';
+            }
+        }
 
-        // 3. Simpan
-        Prestasi::create([
-            'user_id'          => Auth::id(),
-            'form_prestasi_id' => $request->form_prestasi_id,
-            'data_isian'       => $dataIsian, // Masuk otomatis jadi JSON
-            'file_sertifikat'  => $pathSertifikat,
-            'foto_kegiatan'    => $pathFoto,
-            'cerita_kegiatan'  => $request->cerita_kegiatan,
-            'status'           => 'Pending',
-        ]);
+        $request->validate($rules);
 
-        return redirect()->route('mahasiswa.prestasi')->with('success', 'Prestasi berhasil dilaporkan! Menunggu validasi.');
+        $userIdsRaw = $request->user_ids;
+        $firstUserParts = explode('|', $userIdsRaw[0]);
+        $mainUserId = $firstUserParts[0];
+
+        if (str_starts_with($mainUserId, 'MANUAL_')) {
+            return back()->withInput()->with('error', 'Pelapor utama (Ketua) harus mahasiswa yang terdaftar di sistem!');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $dataDinamis = [];
+            $anggotaManual = [];
+
+            foreach ($fields as $field) {
+                if ($field->tipe === 'anggota_kelompok') continue;
+                $key = 'field_' . $field->id;
+
+                if ($field->tipe === 'file' && $request->hasFile($key)) {
+                    $dataDinamis[$field->id] = $request->file($key)->store('prestasi/lampiran', 'public');
+                } else {
+                    $dataDinamis[$field->id] = $request->input($key);
+                }
+            }
+
+            for ($i = 1; $i < count($userIdsRaw); $i++) {
+                $parts = explode('|', $userIdsRaw[$i]);
+                if (str_starts_with($parts[0], 'MANUAL_')) {
+                    $anggotaManual[] = ['nama' => $parts[1]];
+                }
+            }
+
+            if (count($anggotaManual) > 0) {
+                $dataDinamis['anggota_manual'] = $anggotaManual;
+            }
+
+            // =========================================================
+            // LOGIKA SUPER CERDAS: CEK ALUR & ROLE (AUTO APPROVE)
+            // =========================================================
+            $rolePelapor = Auth::user()->role->kode_role ?? 'MHS';
+
+            if ($rolePelapor !== 'MHS') {
+                // Jika Staff/Admin yang input, otomatis Approve
+                $statusAwal = 'Approved';
+            } else {
+                // Jika Mahasiswa, cek apakah ada alur yang nyala
+                $adaAlurAktif = AlurPersetujuan::where('is_active', true)->exists();
+                // Jika semua alur dimatikan, bypass jadi Approved. Jika ada yg aktif, Pending.
+                $statusAwal = $adaAlurAktif ? 'Pending' : 'Approved';
+            }
+
+            $prestasi = Prestasi::create([
+                'user_id'          => $mainUserId,
+                'form_prestasi_id' => $formId,
+                'data_dinamis'     => $dataDinamis,
+                'status'           => $statusAwal,
+            ]);
+
+            for ($i = 1; $i < count($userIdsRaw); $i++) {
+                $parts = explode('|', $userIdsRaw[$i]);
+                if (!str_starts_with($parts[0], 'MANUAL_')) {
+                    DB::table('anggota_prestasis')->insert([
+                        'prestasi_id' => $prestasi->id,
+                        'user_id'     => $parts[0],
+                        'peran'       => 'Anggota',
+                        'created_at'  => now(),
+                        'updated_at'  => now()
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('prestasi.index-all')->with('success', "Data prestasi berhasil disimpan dengan status: {$statusAwal}!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
+        }
     }
 
-    // =============================================================
-    // BAGIAN 2: VALIDASI (JURUSAN & FAKULTAS)
-    // =============================================================
+    public function show($id)
+    {
+        $prestasi = Prestasi::with(['user', 'formPrestasi', 'anggota'])->findOrFail($id);
+        $fields = FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)
+            ->where('tipe', '!=', 'anggota_kelompok')
+            ->orderBy('urutan', 'asc')->get();
 
-    public function updateStatusPrestasi(Request $request, $id)
+        return view('prestasi.show', compact('prestasi', 'fields'));
+    }
+
+    public function edit($id)
+    {
+        $prestasi = Prestasi::with(['user', 'anggota'])->findOrFail($id);
+        $fields = FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)
+            ->orderBy('urutan', 'asc')->get();
+
+        $mahasiswa = User::whereHas('role', fn($q) => $q->where('kode_role', 'MHS'))->get();
+
+        $mahasiswaTerpilih = [];
+        $mahasiswaTerpilih[] = $prestasi->user_id . '|' . $prestasi->user->name . '|' . $prestasi->user->nim_nip;
+
+        foreach ($prestasi->anggota as $ang) {
+            $mahasiswaTerpilih[] = $ang->id . '|' . $ang->name . '|' . $ang->nim_nip;
+        }
+
+        $dataDinamis = is_string($prestasi->data_dinamis) ? json_decode($prestasi->data_dinamis, true) : ($prestasi->data_dinamis ?? []);
+        if (isset($dataDinamis['anggota_manual']) && is_array($dataDinamis['anggota_manual'])) {
+            foreach ($dataDinamis['anggota_manual'] as $man) {
+                $mahasiswaTerpilih[] = 'MANUAL_' . uniqid() . '|' . $man['nama'] . '|-';
+            }
+        }
+
+        $prestasi->data_dinamis = $dataDinamis;
+        return view('prestasi.edit', compact('prestasi', 'fields', 'mahasiswa', 'mahasiswaTerpilih'));
+    }
+
+    public function update(Request $request, $id)
     {
         $prestasi = Prestasi::findOrFail($id);
-        $role = Auth::user()->role->kode_role;
+        $formId = $prestasi->form_prestasi_id;
+        $fields = FieldFormPrestasi::where('form_prestasi_id', $formId)->get();
 
-        // Logika Status Berjenjang
-        $statusBaru = $request->status; // Disetujui Jurusan / Disetujui Fakultas / Ditolak
+        $rules = ['user_ids' => 'required|array|min:1'];
+        foreach ($fields as $field) {
+            if ($field->tipe === 'anggota_kelompok') continue;
+            if ($field->is_required && $field->tipe !== 'file') $rules['field_' . $field->id] = 'required';
+            if ($field->tipe === 'file') $rules['field_' . $field->id] = 'nullable|file|max:10240';
+        }
+        $request->validate($rules);
+
+        $userIdsRaw = $request->user_ids;
+        $firstUserParts = explode('|', $userIdsRaw[0]);
+        $mainUserId = $firstUserParts[0];
+
+        if (str_starts_with($mainUserId, 'MANUAL_')) {
+            return back()->withInput()->with('error', 'Pelapor utama (Ketua) harus mahasiswa yang terdaftar di sistem!');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $dataDinamis = is_string($prestasi->data_dinamis) ? json_decode($prestasi->data_dinamis, true) : ($prestasi->data_dinamis ?? []);
+            $anggotaManual = [];
+
+            foreach ($fields as $field) {
+                if ($field->tipe === 'anggota_kelompok') continue;
+                $key = 'field_' . $field->id;
+
+                if ($field->tipe === 'file' && $request->hasFile($key)) {
+                    if (isset($dataDinamis[$field->id])) Storage::disk('public')->delete($dataDinamis[$field->id]);
+                    $dataDinamis[$field->id] = $request->file($key)->store('prestasi/lampiran', 'public');
+                } elseif ($field->tipe !== 'file') {
+                    $dataDinamis[$field->id] = $request->input($key);
+                }
+            }
+
+            for ($i = 1; $i < count($userIdsRaw); $i++) {
+                $parts = explode('|', $userIdsRaw[$i]);
+                if (str_starts_with($parts[0], 'MANUAL_')) $anggotaManual[] = ['nama' => $parts[1]];
+            }
+            $dataDinamis['anggota_manual'] = $anggotaManual;
+
+            // =========================================================
+            // JIKA MHS EDIT DATA, RESET KE PENDING (Atau Bypass Approved)
+            // Jika Admin yg edit, biarkan statusnya tetap yg terakhir
+            // =========================================================
+            $rolePelapor = Auth::user()->role->kode_role ?? 'MHS';
+            $statusAkhir = $prestasi->status; // Default: pertahankan status saat ini
+
+            if ($rolePelapor === 'MHS') {
+                $adaAlurAktif = AlurPersetujuan::where('is_active', true)->exists();
+                $statusAkhir = $adaAlurAktif ? 'Pending' : 'Approved';
+            }
+
+            $prestasi->update([
+                'user_id'      => $mainUserId,
+                'data_dinamis' => $dataDinamis,
+                'status'       => $statusAkhir,
+            ]);
+
+            DB::table('anggota_prestasis')->where('prestasi_id', $prestasi->id)->delete();
+
+            for ($i = 1; $i < count($userIdsRaw); $i++) {
+                $parts = explode('|', $userIdsRaw[$i]);
+                if (!str_starts_with($parts[0], 'MANUAL_')) {
+                    DB::table('anggota_prestasis')->insert([
+                        'prestasi_id' => $prestasi->id,
+                        'user_id'     => $parts[0],
+                        'peran'       => 'Anggota',
+                        'created_at'  => now(),
+                        'updated_at'  => now()
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('prestasi.index-all')->with('success', 'Data prestasi berhasil diperbarui!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Gagal memperbarui data: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy($id)
+    {
+        $prestasi = Prestasi::findOrFail($id);
+        $dataDinamis = is_string($prestasi->data_dinamis) ? json_decode($prestasi->data_dinamis, true) : ($prestasi->data_dinamis ?? []);
+
+        if (is_array($dataDinamis)) {
+            foreach ($dataDinamis as $key => $val) {
+                if (is_string($val) && Str::contains($val, 'prestasi/lampiran')) Storage::disk('public')->delete($val);
+            }
+        }
+        $prestasi->delete();
+        return back()->with('success', 'Data prestasi berhasil dihapus permanen.');
+    }
+
+    /**
+     * 8. Halaman Manajemen Alur Persetujuan
+     */
+    public function alurPersetujuan()
+    {
+        $alur = AlurPersetujuan::orderBy('urutan', 'asc')->get();
+        return view('prestasi.alur_persetujuan', compact('alur'));
+    }
+
+    /**
+     * 9. Simpan Perubahan Alur Persetujuan
+     */
+    public function updateAlur(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            AlurPersetujuan::query()->update(['is_active' => false]);
+
+            if ($request->has('is_active') && is_array($request->is_active)) {
+                $activeIds = array_keys($request->is_active);
+                AlurPersetujuan::whereIn('id', $activeIds)->update(['is_active' => true]);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Konfigurasi Alur Persetujuan berhasil diperbarui!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memperbarui konfigurasi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 10. Halaman Antrean Validasi
+     */
+    public function validasiPrestasi(Request $request)
+    {
+        // Cek tab aktif dari URL, default ke 'pending'
+        $tab = $request->get('tab', 'pending');
+
+        // Data yang belum divalidasi
+        $pending = Prestasi::with(['user', 'formPrestasi', 'anggota'])
+            ->where('status', 'Pending')
+            ->latest()
+            ->paginate(10, ['*'], 'p_page')
+            ->withQueryString();
+
+        // Data yang sudah diproses (Approved / Rejected)
+        $validated = Prestasi::with(['user', 'formPrestasi', 'anggota'])
+            ->whereIn('status', ['Approved', 'Rejected'])
+            ->latest()
+            ->paginate(10, ['*'], 'v_page')
+            ->withQueryString();
+
+        return view('prestasi.validasi', compact('pending', 'validated', 'tab'));
+    }
+
+    /**
+     * 11. Update Status (Setujui / Tolak Satuan)
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:Approved,Rejected,Pending', // Gunakan kata yang simpel
+            'pesan_revisi' => 'nullable|string'
+        ]);
+
+        $prestasi = Prestasi::findOrFail($id);
 
         $prestasi->update([
-            'status' => $statusBaru,
-            'catatan_penolakan' => $statusBaru == 'Ditolak' ? $request->alasan_ditolak : null
+            'status' => $request->status,
+            'pesan_revisi' => $request->status === 'Rejected' ? $request->pesan_revisi : null
         ]);
 
-        return back()->with('success', 'Status prestasi berhasil diperbarui!');
+        $msg = $request->status === 'Approved' ? 'Prestasi berhasil disetujui!' : 'Prestasi telah ditolak.';
+        return back()->with('success', $msg);
     }
 
-    // =============================================================
-    // BAGIAN 3: PUBLIKASI KONTEN (FITUR SAKTI DARI KODE LAMAMU)
-    // =============================================================
-
-    public function publishPrestasi($id)
+    /**
+     * Validasi Massal
+     */
+    public function validasiMassal(Request $request)
     {
-        $prestasi = Prestasi::with(['user', 'formPrestasi'])->findOrFail($id);
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:prestasis,id'
+        ]);
 
-        // Helper untuk rapihin tulisan (Title Case)
-        function formatCapital($text)
-        {
-            $text = preg_replace('/\s+/', ' ', trim($text));
-            return mb_convert_case($text, MB_CASE_TITLE, "UTF-8");
-        }
+        Prestasi::whereIn('id', $request->ids)->update([
+            'status' => 'Approved',
+            'pesan_revisi' => null,
+            'updated_at' => now()
+        ]);
 
-        // Ambil Nama Prestasi dari JSON data_isian (Asumsi ada field 'nama_event')
-        $namaEvent = $prestasi->data_isian['nama_event'] ?? 'Kegiatan Mahasiswa';
-        $namaMhs   = formatCapital($prestasi->user->name);
-
-        // Buat Isi Berita Otomatis
-        $content = "Selamat kepada {$namaMhs} yang telah berhasil meraih prestasi dalam ajang " . formatCapital($namaEvent) . ". " . $prestasi->cerita_kegiatan;
-
-        // Gunakan foto kegiatan sebagai cover berita, jika tidak ada pakai placeholder
-        $thumbnailPath = $prestasi->foto_kegiatan ?? 'defaults/news-placeholder.jpg';
-
-        // Simpan ke Tabel Konten (Mading)
-        Konten::updateOrCreate(
-            ['judul' => "Prestasi: " . formatCapital($namaEvent)],
-            [
-                'slug'         => Str::slug($namaEvent) . '-' . time(),
-                'isi_konten'   => $content,
-                'gambar_cover' => $thumbnailPath,
-                'kategori'     => 'Prestasi',
-                'is_aktif'     => true,
-                'created_by'   => Auth::id(),
-            ]
-        );
-
-        $prestasi->update(['is_published' => true]);
-
-        return back()->with('success', 'Prestasi resmi dipublikasikan ke halaman depan!');
+        return back()->with('success', count($request->ids) . ' Data prestasi berhasil disetujui secara massal!');
     }
 
-    public function destroyPrestasi($id)
+    public function validasiShow($id)
     {
-        $prestasi = Prestasi::findOrFail($id);
+        $prestasi = Prestasi::with(['user.prodi.jurusan.fakultas', 'formPrestasi', 'anggota'])
+            ->findOrFail($id);
 
-        // Hapus File Fisik
-        if ($prestasi->file_sertifikat) Storage::disk('public')->delete($prestasi->file_sertifikat);
-        if ($prestasi->foto_kegiatan) Storage::disk('public')->delete($prestasi->foto_kegiatan);
+        $fields = \App\Models\FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)
+            ->where('tipe', '!=', 'anggota_kelompok')
+            ->orderBy('urutan', 'asc')
+            ->get();
 
-        $prestasi->delete();
-        return back()->with('success', 'Data prestasi telah dihapus.');
+        return view('prestasi.validasi_show', compact('prestasi', 'fields'));
     }
 }

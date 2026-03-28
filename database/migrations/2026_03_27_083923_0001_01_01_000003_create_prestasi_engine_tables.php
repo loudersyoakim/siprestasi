@@ -24,7 +24,7 @@ return new class extends Migration
             $table->foreignId('form_prestasi_id')->constrained('form_prestasis')->onDelete('cascade');
             $table->string('nama_field');
             $table->string('label');
-            $table->enum('tipe', ['text', 'textarea', 'number', 'date', 'file', 'select', 'anggota_kelompok']);
+            $table->enum('tipe', ['text', 'textarea', 'number', 'date', 'file', 'select', 'radio', 'checkbox', 'anggota_kelompok']);
             $table->json('opsi')->nullable();
             $table->json('aturan_validasi')->nullable();
             $table->boolean('is_required')->default(true);

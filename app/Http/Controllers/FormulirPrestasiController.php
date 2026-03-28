@@ -8,17 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
-class ManajemenFormController extends Controller
+class FormulirPrestasiController extends Controller
 {
-    // ==========================================
-    // BAGIAN 1: MANAJEMEN KATEGORI FORM
-    // ==========================================
-
-    public function indexManajemenForm()
+    public function index()
     {
-        // Ambil semua form beserta jumlah field-nya
-        $forms = FormPrestasi::withCount('fields')->latest()->get();
-        return view('super_admin.manajemen_form.index', compact('forms'));
+        $kategori = FormPrestasi::withCount('fields')->latest()->get();
+        return view('prestasi.formulir_prestasi_index', compact('kategori'));
     }
 
     public function store(Request $request)
@@ -30,7 +25,7 @@ class ManajemenFormController extends Controller
 
         FormPrestasi::create([
             'nama_form' => $request->nama_form,
-            'slug'      => Str::slug($request->nama_form . '-' . Str::random(5)), // Antisipasi nama sama
+            'slug'      => Str::slug($request->nama_form . '-' . Str::random(5)),
             'deskripsi' => $request->deskripsi,
             'is_active' => true,
             'created_by' => Auth::id(),
@@ -50,9 +45,7 @@ class ManajemenFormController extends Controller
 
         $form->update([
             'nama_form' => $request->nama_form,
-            // Slug sengaja tidak diupdate agar URL yang sudah nyebar tidak rusak
             'deskripsi' => $request->deskripsi,
-            'is_active' => $request->has('is_active'), // Checkbox aktif/tidak
         ]);
 
         return back()->with('success', 'Informasi Form berhasil diperbarui!');
@@ -61,22 +54,17 @@ class ManajemenFormController extends Controller
     public function destroy($id)
     {
         $form = FormPrestasi::findOrFail($id);
-        $form->delete(); // Ini Soft Delete, jadi data aman
-        return back()->with('success', 'Form berhasil dinonaktifkan / dihapus sementara!');
+        $form->delete();
+        return back()->with('success', 'Kategori Form berhasil dinonaktifkan!');
     }
-
-    // ==========================================
-    // BAGIAN 2: MANAJEMEN FIELD (PERTANYAAN)
-    // ==========================================
 
     public function show($id)
     {
-        // Halaman "Atur Pertanyaan"
         $form = FormPrestasi::with(['fields' => function ($q) {
             $q->orderBy('urutan', 'asc');
         }])->findOrFail($id);
 
-        return view('super_admin.manajemen_form.atur_field', compact('form'));
+        return view('prestasi.formulir_prestasi_show', compact('form'));
     }
 
     public function storeField(Request $request, $id)
@@ -89,11 +77,11 @@ class ManajemenFormController extends Controller
         ]);
 
         $opsiArray = null;
-        if ($request->tipe === 'select' && $request->opsi) {
+        // FIX: Tambahkan pengecekan untuk radio dan checkbox
+        if (in_array($request->tipe, ['select', 'radio', 'checkbox']) && $request->opsi) {
             $opsiArray = array_map('trim', explode(',', $request->opsi));
         }
 
-        // Cari urutan terakhir
         $urutanTerakhir = $form->fields()->max('urutan') ?? 0;
 
         $form->fields()->create([
@@ -119,7 +107,8 @@ class ManajemenFormController extends Controller
         ]);
 
         $opsiArray = null;
-        if ($request->tipe === 'select' && $request->opsi) {
+        // FIX: Tambahkan pengecekan untuk radio dan checkbox
+        if (in_array($request->tipe, ['select', 'radio', 'checkbox']) && $request->opsi) {
             $opsiArray = array_map('trim', explode(',', $request->opsi));
         }
 
@@ -138,7 +127,22 @@ class ManajemenFormController extends Controller
     public function destroyField($id)
     {
         $field = FieldFormPrestasi::findOrFail($id);
-        $field->delete(); // Karena tidak pakai soft delete di tabel ini, maka ini force delete
+        $field->delete();
         return back()->with('success', 'Pertanyaan berhasil dihapus permanen!');
+    }
+
+    public function reorderFields(Request $request, $id)
+    {
+        $request->validate([
+            'order' => 'required|array',
+        ]);
+
+        foreach ($request->order as $urutan => $fieldId) {
+            FieldFormPrestasi::where('id', $fieldId)
+                ->where('form_prestasi_id', $id)
+                ->update(['urutan' => $urutan + 1]);
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Urutan berhasil disimpan!']);
     }
 }

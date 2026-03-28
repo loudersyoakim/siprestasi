@@ -29,7 +29,7 @@
             </div>
         </div>
         <div class="relative z-10 mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-500 uppercase tracking-wider">
-            <a href="{{ route('super_admin.manajemen-akun') }}" class="hover:underline">Kelola Akun <i class="bi bi-arrow-right"></i></a>
+            <a href="{{ route('prestasi.formulir-prestasi.index') }}" class="hover:underline">Kelola Akun <i class="bi bi-arrow-right"></i></a>
         </div>
     </div>
 
@@ -115,7 +115,7 @@
                     <span class="text-[10px] font-black text-gray-600 uppercase tracking-wider group-hover:text-blue-700">Buat Berita</span>
                 </a>
 
-                <a href="{{ route('super_admin.manajemen-form') }}" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 border border-transparent hover:bg-orange-50 hover:border-orange-100 transition-all group text-center gap-3">
+                <a href="{{ route('prestasi.formulir-prestasi.index') }}" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 border border-transparent hover:bg-orange-50 hover:border-orange-100 transition-all group text-center gap-3">
                     <div class="w-12 h-12 rounded-full bg-white text-orange-500 flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
                         <i class="bi bi-ui-radios"></i>
                     </div>

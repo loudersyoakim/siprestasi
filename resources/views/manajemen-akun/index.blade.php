@@ -1,10 +1,12 @@
+
 @extends('layouts.app')
 
 @section('content')
-<div class="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-    <h3 class="text-lg font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
+
+<div  class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+     <h3 class="text-xl font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
     @if(Auth::user()->hasPermission('akun.manage_user'))
-    <a href="{{ route('akun.create') }}" class="bg-[#006633] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-[#004d26] transition-all">
+    <a href="{{ route('akun.create') }}" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#004d26] transition-colors shadow-sm cursor-pointer">
         <i class="bi bi-plus-lg"></i> Tambah Akun
     </a>
     @endif
@@ -33,8 +35,11 @@
         </div>
         <div class="flex gap-2">
             @if($statusTab === 'pending')
-            <button onclick="submitBulk('activate')" class="bg-[#006633] hover:bg-[#004d26] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Aktivasi</button>
+                <button onclick="submitBulk('activate')" class="bg-[#006633] hover:bg-[#004d26] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Aktivasi</button>
+            @else
+                <button onclick="submitBulk('deactivate')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Nonaktifkan</button>
             @endif
+            
             <button onclick="submitBulk('delete')" class="bg-white border border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Hapus</button>
             <button onclick="unselectAll()" class="text-gray-500 hover:text-gray-800 text-[10px] font-bold uppercase px-2">Batal</button>
         </div>
@@ -63,7 +68,7 @@
         </form>
     </div>
 
-    <div class="w-full overflow-x-auto">
+    <div class="w-full overflow-x-auto min-h-[300px] pb-32">
         <table class="w-full text-left border-collapse min-w-[800px]">
             <thead class="bg-gray-50/50 border-b border-gray-100">
                 <tr>

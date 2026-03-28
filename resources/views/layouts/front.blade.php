@@ -17,7 +17,11 @@
     {{-- NAVIGATION (Selalu Hijau) --}}
     <nav id="mainNav" class="fixed top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center transition-all duration-500 ease-in-out bg-[#006633] text-white shadow-md">
         <div class="flex items-center gap-3">
-            <img src="{{ !empty($pengaturan['logo_aplikasi']) ? asset('img/' . $pengaturan['logo_aplikasi']) : asset('img/logo-unimed.png') }}" alt="Logo" class="h-10 w-auto transition-all duration-500" id="navLogo">
+         @php 
+            $logoValue = $pengaturan['logo_aplikasi'] ?? 'logo-unimed.png';
+            $logoSrc = ($logoValue === 'logo-unimed.png') ? asset('img/logo-unimed.png') : asset('storage/' . $logoValue);
+        @endphp
+        <img src="{{ $logoSrc }}" alt="Logo" class="h-9 w-auto">
             <div class="border-l border-white/20 pl-3">
                 <h2 id="navTitle" class="font-black text-sm lg:text-base tracking-tight leading-none uppercase transition-all duration-500">{{$pengaturan['nama_universitas'] ?? 'Universitas Negeri Medan' }}</h2>
                 <p id="navTagline" class="text-[7px] uppercase tracking-widest text-white/60 transition-all duration-500 overflow-hidden opacity-100 max-h-4">The Character Building University</p>
@@ -61,12 +65,18 @@
     </main>
 
     {{-- FOOTER --}}
+    {{-- FOOTER --}}
     <footer class="bg-[#006633] text-white pt-16 pb-8">
         <div class="container mx-auto px-6 lg:px-20">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-12">
+                {{-- Bagian Kiri: Identitas (Ambil 7 Kolom) --}}
                 <div class="md:col-span-7">
                     <div class="flex items-center gap-3 mb-6">
-                        <img src="{{ !empty($pengaturan['logo_aplikasi']) ? asset('img/' . $pengaturan['logo_aplikasi']) : asset('img/logo-unimed.png') }}" alt="Logo" class="h-12 w-auto">
+                        @php 
+                            $logoValue = $pengaturan['logo_aplikasi'] ?? 'logo-unimed.png';
+                            $logoSrc = ($logoValue === 'logo-unimed.png') ? asset('img/logo-unimed.png') : asset('storage/' . $logoValue);
+                        @endphp
+                        <img src="{{ $logoSrc }}" alt="Logo" class="h-9 w-auto">
                         <div class="border-l border-white/50 pl-4">
                             <h2 class="font-black text-xl tracking leading-none uppercase">{{ $pengaturan['nama_aplikasi'] ?? 'Universitas Negeri Medan' }}</h2>
                             <p class="text-[9px] uppercase tracking-[0.2em] text-white/70">The Character Building University</p>
@@ -76,16 +86,20 @@
                         Jalan Willem Iskandar Psr. V - Kotak Pos No. 1589, Percut Sei Tuan, Deli Serdang, Sumatera Utara 20221
                     </p>
                 </div>
-                <div class="md:col-span-3">
+                
+                {{-- Bagian Kanan: Kontak (Diperbesar jadi 5 Kolom) --}}
+                <div class="md:col-span-5 lg:col-span-4">
                     <h3 class="font-bold text-lg mb-6 relative inline-block">Hubungi Kami<span class="absolute -bottom-2 left-0 w-8 h-1 bg-yellow-400 rounded-full"></span></h3>
                     <div class="space-y-4">
                         
                         {{-- Telepon Dinamis --}}
                         @if(isset($pengaturan['kontak_telepon']))
                         <div class="flex items-center gap-4 group">
-                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all"><i class="bi bi-telephone"></i></div>
+                            <div class="shrink-0 w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all">
+                                <i class="bi bi-telephone"></i>
+                            </div>
                             <div>
-                                <p class="text-[10px] uppercase text-white/50 font-bold">Telepon Kantor</p>
+                                <p class="text-[10px] uppercase text-white/50 font-bold">Telepon </p>
                                 <p class="font-bold">{{ $pengaturan['kontak_telepon'] }}</p>
                             </div>
                         </div>
@@ -94,10 +108,13 @@
                         {{-- Email Dinamis --}}
                         @if(isset($pengaturan['email_kampus']))
                         <div class="flex items-center gap-4 group mt-4">
-                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all"><i class="bi bi-envelope"></i></div>
+                            <div class="shrink-0 w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-[#006633] transition-all">
+                                <i class="bi bi-envelope"></i>
+                            </div>
                             <div>
-                                <p class="text-[10px] uppercase text-white/50 font-bold">Email Resmi</p>
-                                <p class="font-bold text-sm">{{ $pengaturan['email_kampus'] }}</p>
+                                <p class="text-[10px] uppercase text-white/50 font-bold">Email </p>
+                                {{-- break-all dihapus, pakai whitespace-nowrap supaya maksa 1 baris --}}
+                                <p class="font-bold text-sm whitespace-nowrap">{{ $pengaturan['email_kampus'] }}</p>
                             </div>
                         </div>
                         @endif
@@ -106,7 +123,8 @@
                 </div>
             </div>
             <div class="pt-8 border-t border-white/10 text-center">
-                <p class="text-xs text-white/50">&copy; {{ date('Y') }} <span class="text-white font-bold">{{ $pengaturan['nama_aplikasi'] ?? '' }} - {{ $pengaturan['nama_universitas'] ?? 'Universitas Negeri Medan' }}. </span> </p></div>
+                <p class="text-xs text-white/50">&copy; {{ date('Y') }} <span class="text-white font-bold">{{ $pengaturan['nama_aplikasi'] ?? '' }} - {{ $pengaturan['nama_universitas'] ?? 'Universitas Negeri Medan' }}. </span> </p>
+            </div>
         </div>
     </footer>
 

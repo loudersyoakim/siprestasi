@@ -42,51 +42,58 @@
     </div>
 </div>
 </body>
+
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const dropdownToggles = document.querySelectorAll('.nav-dropdown-toggle');
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggles = document.querySelectorAll('.nav-dropdown-toggle');
         
-        dropdownToggles.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation(); // Mencegah event bubbling yang merusak hover
-                
-                const menu = this.nextElementSibling;
-                const icon = this.querySelector('.bi-chevron-down');
-                
-                // Toggle Dropdown
-                if(menu.classList.contains('hidden')) {
-                    menu.classList.remove('hidden');
-                    menu.classList.add('block');
-                    if(icon) icon.classList.add('rotate-180', 'text-[#006633]');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                const content = toggle.nextElementSibling;
+                const icon = toggle.querySelector('.bi-chevron-down');
+                const isOpen = content.classList.contains('block');
+
+                // Auto-close menu lain yang sedang BUKAN menu aktif
+                toggles.forEach(otherToggle => {
+                    if (otherToggle !== toggle && !otherToggle.hasAttribute('data-active')) {
+                        otherToggle.nextElementSibling.classList.remove('block');
+                        otherToggle.nextElementSibling.classList.add('hidden');
+                        otherToggle.querySelector('.bi-chevron-down').classList.remove('rotate-180');
+                    }
+                });
+
+                // Toggle menu yang diklik
+                if (isOpen) {
+                    content.classList.remove('block');
+                    content.classList.add('hidden');
+                    icon.classList.remove('rotate-180');
                 } else {
-                    menu.classList.remove('block');
-                    menu.classList.add('hidden');
-                    if(icon) icon.classList.remove('rotate-180', 'text-[#006633]');
+                    content.classList.remove('hidden');
+                    content.classList.add('block');
+                    icon.classList.add('rotate-180');
                 }
             });
         });
-
-        // Toggle Modal Bantuan
-        window.toggleHelpModal = function() {
-            const modal = document.getElementById('help-modal');
-            modal.classList.toggle('hidden');
-        }
     });
 
-    function toggleSidebar() {
+    // Menangani Sidebar di Mobile
+    window.toggleSidebar = function() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         
-        // Memastikan overlay benar-benar hilang agar tidak menghalangi hover
         if(sidebar.classList.contains('-translate-x-full')) {
             sidebar.classList.remove('-translate-x-full');
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            if(overlay) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            }
         } else {
             sidebar.classList.add('-translate-x-full');
-            overlay.classList.remove('opacity-100');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
+            if(overlay) {
+                overlay.classList.remove('opacity-100');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
         }
     }
 </script>
