@@ -13,6 +13,7 @@ use App\Http\Controllers\DaftarMahasiswaController;
 use App\Http\Controllers\StrukturAkademikController;
 use App\Http\Controllers\FormulirPrestasiController;
 use App\Http\Controllers\PengaturanSistemController;
+use App\Http\Controllers\AtributPrestasiController;
 
 // =================================================================
 // RUTE PUBLIK & LANDING PAGE
@@ -84,6 +85,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/role-permission/update', 'updateRolePermission')
                 ->middleware('permission:akun.manage_role')
                 ->name('akun.role-permission.update');
+            Route::get('/sync-prodi', 'syncProdiLama')->name('manajemen-akun.sync-prodi');
         });
 
     // -------------------------------------------------------------
@@ -150,7 +152,23 @@ Route::middleware(['auth'])->group(function () {
                 Route::delete('/prodi/{id}', 'destroyProdi')->name('prodi.destroy');
             });
 
-        // --- B. PENGATURAN SISTEM ---
+        // --- B. ATRIBUT PRESTASI ---
+        Route::controller(AtributPrestasiController::class)
+            ->prefix('atribut-prestasi')
+            ->middleware('permission:sistem.config') // Atau buat permission baru 'master.atribut' jika ada
+            ->group(function () {
+                Route::get('/', 'index')->name('master.atribut.index');
+
+                Route::post('/tingkat', 'storeTingkat')->name('master.tingkat.store');
+                Route::put('/tingkat/{id}', 'updateTingkat')->name('master.tingkat.update'); // BARU
+                Route::delete('/tingkat/{id}', 'destroyTingkat')->name('master.tingkat.destroy');
+
+                Route::post('/capaian', 'storeCapaian')->name('master.capaian.store');
+                Route::put('/capaian/{id}', 'updateCapaian')->name('master.capaian.update'); // BARU
+                Route::delete('/capaian/{id}', 'destroyCapaian')->name('master.capaian.destroy');
+            });
+
+        // --- C. PENGATURAN SISTEM ---
         Route::controller(PengaturanSistemController::class)
             ->prefix('pengaturan-sistem')
             ->middleware('permission:sistem.config')
@@ -159,6 +177,8 @@ Route::middleware(['auth'])->group(function () {
                 Route::put('/update', 'update')->name('pengaturan-sistem.update');
             });
     });
+
+
     // -------------------------------------------------------------
     // 6. MANAJEMEN FORM BUILDER 
     // -------------------------------------------------------------
@@ -172,7 +192,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', 'store')->name('store');
             Route::put('/{id}', 'update')->name('update');
             Route::delete('/{id}', 'destroy')->name('destroy');
-
+            Route::put('/{id}/update-statis', 'updateStatis')->name('update-statis');
             // Atur Pertanyaan (Field)
             Route::get('/{id}/atur', 'show')->name('show');
             Route::post('/{id}/field', 'storeField')->name('field.store');
@@ -184,7 +204,7 @@ Route::middleware(['auth'])->group(function () {
     // -------------------------------------------------------------
     // 7. MADING DIGITAL & KONTEN PUBLIKASI
     // -------------------------------------------------------------
-    Route::controller(ManajemenKontenController::class)->prefix('mading-digital')
+    Route::controller(ManajemenKontenController::class)->prefix('konten')
         ->middleware('permission:konten.manage_artikel')->group(function () {
 
             Route::get('/', 'indexManajemenKonten')->name('konten.index');
@@ -193,6 +213,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{id}/edit', 'editKonten')->name('konten.edit');
             Route::put('/{id}', 'updateKonten')->name('konten.update');
             Route::delete('/{id}', 'destroyKonten')->name('konten.destroy');
+
+            Route::patch('/prestasi/{id}/publish', 'publishPrestasi')->name('konten.prestasi.publish');
+            Route::patch('/prestasi/{id}/takedown', 'takedownPrestasi')->name('konten.prestasi.takedown');
+
+            Route::get('/pengaturan-beranda', 'landingSettings')->name('konten.landing');
+            Route::patch('/pengaturan-beranda', 'updateLandingSettings')->name('konten.landing.update');
         });
 });
 

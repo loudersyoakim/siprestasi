@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-    <h3 class="text-xl font-black text-gray-800 tracking-tight">Semua Prestasi</h3>
+    <h3 class="text-2xl font-black text-gray-800 tracking-tight">Semua Prestasi</h3>
 
     @if(Auth::user()->hasPermission('prestasi.create'))
     <a href="{{ route('prestasi.create') }}" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-green-200 hover:bg-[#004d26] transition-all">
@@ -21,10 +21,10 @@
             <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
                 <div class="relative w-full sm:w-64">
                     <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="search-input" name="search" value="{{ request('search') }}" placeholder="Cari Pelapor atau Data..." autocomplete="off" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#006633] focus:ring-1 focus:ring-[#006633] transition-all">
+                    <input type="text" id="search-input" name="search" value="{{ request('search') }}" placeholder="Cari Pelapor atau Kegiatan..." autocomplete="off" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#006633] focus:ring-1 focus:ring-[#006633] transition-all">
                 </div>
 
-                {{-- Dropdown Filter Kategori --}}
+                {{-- Dropdown Filter Kategori Form --}}
                 <div class="relative group">
                     <button type="button" onclick="toggleFilterDropdown('dropdown-kategori', event)" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:border-[#006633] hover:text-[#006633] transition-all">
                         <i class="bi bi-funnel-fill"></i><span>Kategori Form</span>
@@ -76,7 +76,7 @@
             </div>
         </div>
 
-        {{-- AREA TABEL (Otomatis Scroll Horizontal & Sticky Kolom Kanan) --}}
+        {{-- AREA TABEL --}}
         <div class="w-full overflow-x-auto custom-scrollbar min-h-[300px] pb-10">
             <table class="w-full min-w-max text-left border-collapse">
                 <thead class="bg-gray-50/80 border-b border-gray-100">
@@ -84,34 +84,28 @@
                         <th class="px-4 py-4 w-1 text-gray-500 text-[10px] uppercase font-black tracking-wider align-top">No</th>
                         
                         <th class="px-4 py-4 align-top">
-                            <div class="text-gray-500 text-[10px] uppercase font-black tracking-wider mb-2">Data Diri</div>
+                            <div class="text-gray-500 text-[10px] uppercase font-black tracking-wider mb-2">Pelapor & Tim</div>
                         </th>
 
-                        <th class="px-4 py-4 w-1 align-top">
-                            <div class="text-gray-500 text-[10px] uppercase font-black tracking-wider mb-2">Waktu Lapor</div>
+                        {{-- KOLOM STATIS BARU --}}
+                        <th class="px-4 py-4 align-top">
+                            <div class="text-[#006633] text-[10px] uppercase font-black tracking-wider mb-2">Informasi Kegiatan</div>
                         </th>
 
                         <th class="px-4 py-4 w-1 align-top text-center">
                             <div class="text-gray-500 text-[10px] uppercase font-black tracking-wider mb-2">Status Validasi</div>
                         </th>
 
-                        {{-- KOLOM DINAMIS --}}
+                        {{-- KOLOM DINAMIS (Jika Form Terpilih) --}}
                         @if(request('form_id') && isset($dynamicFields) && $dynamicFields->count() > 0)
                             @foreach($dynamicFields as $field)
                                 <th class="px-4 py-4 align-top max-w-[250px] border-l border-gray-100">
-                                    <div class="text-[#006633] text-[10px] uppercase font-black tracking-wider mb-2">{{ $field->label }}</div>
+                                    <div class="text-gray-400 text-[10px] uppercase font-black tracking-wider mb-2">{{ $field->label }}</div>
                                 </th>
                             @endforeach
-                        @else
-                            <th class="px-4 py-4 align-top max-w-[200px] border-l border-gray-100">
-                                <div class="text-gray-500 text-[10px] uppercase font-black tracking-wider mb-2">Kategori Formulir</div>
-                            </th>
                         @endif
 
-                        {{-- AKSI MEMBEKU (STICKY RIGHT) --}}
-                        <th class="px-4 py-4 w-1 text-center text-gray-500 text-[10px] uppercase font-black tracking-wider align-top sticky right-0 bg-gray-100 border-l border-gray-200 z-20" style="box-shadow: -4px 0 10px rgba(0,0,0,0.03);">
-                            Aksi
-                        </th>
+                        <th class="px-4 py-4 w-1 text-center text-gray-500 text-[10px] uppercase font-black tracking-wider align-top sticky right-0 bg-gray-100 border-l border-gray-200 z-20" style="box-shadow: -4px 0 10px rgba(0,0,0,0.03);">Aksi</th>
                     </tr>
                 </thead>
                 
@@ -120,6 +114,7 @@
                     <tr class="hover:bg-gray-50/50 transition-colors group">
                         <td class="px-4 py-4 text-gray-400 font-semibold align-top">{{ $prestasi->firstItem() + $index }}</td>
                         
+                        {{-- KOLOM PELAPOR --}}
                         <td class="px-4 py-4 align-top">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-green-100 text-[#006633] flex items-center justify-center font-black shrink-0">
@@ -130,50 +125,49 @@
                                         {{ $item->user->name ?? 'User Terhapus' }}
                                     </div>
                                     <div class="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 flex flex-wrap items-center gap-1">
-                                        {{-- Nampilin NIM, Prodi, Fakultas --}}
-                                        <span class="font-bold text-[#006633]">{{ $item->user->nim_nip ?? '-' }}</span>
-                                        <span>•</span>
-                                        <span class="truncate max-w-[150px]" title="{{ $item->user->prodi->nama_prodi ?? 'Prodi -' }}">
-                                            {{ $item->user->prodi->nama_prodi ?? 'Prodi -' }}
-                                        </span>
+                                        <span class="font-bold text-[#006633]">{{ $item->user->nim_nip ?? '-' }}</span> • 
+                                        <span class="truncate max-w-[150px]">{{ $item->user->prodi->nama_prodi ?? 'Prodi -' }}</span>
                                     </div>
-                                    
-                                    {{-- Badge Individu/Tim --}}
                                     <div class="mt-1.5">
                                         @if($item->anggota->count() > 0)
-                                            <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-black uppercase">
-                                                <i class="bi bi-people-fill"></i> Tim ({{ $item->anggota->count() + 1 }} Orang)
-                                            </span>
+                                            <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-black uppercase"><i class="bi bi-people-fill"></i> Tim ({{ $item->anggota->count() + 1 }})</span>
                                         @else
-                                            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[9px] font-black uppercase">
-                                                <i class="bi bi-person-fill"></i> Individu
-                                            </span>
+                                            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[9px] font-black uppercase"><i class="bi bi-person-fill"></i> Individu</span>
                                         @endif
                                     </div>
                                 </div>
                             </div>
                         </td>
 
-                        <td class="px-4 py-4 align-top whitespace-nowrap">
-                            <div class="text-xs font-bold text-gray-700">{{ $item->created_at->format('d M Y') }}</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">{{ $item->created_at->format('H:i') }} WIB</div>
+                        {{-- KOLOM STATIS (Judul, Tingkat, Capaian) --}}
+                        <td class="px-4 py-4 align-top max-w-[300px]">
+                            <div class="font-bold text-gray-800 text-sm line-clamp-2 leading-tight" title="{{ $item->nama_kegiatan ?? '-' }}">
+                                {{ $item->nama_kegiatan ?? '-' }}
+                            </div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1.5 flex flex-wrap items-center gap-1.5">
+                                <span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100">{{ $item->tingkatPrestasi->nama_tingkat ?? '-' }}</span>
+                                <span class="bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded border border-yellow-100">{{ $item->capaianPrestasi->nama_capaian ?? '-' }}</span>
+                            </div>
+                            <div class="text-[9px] text-gray-400 font-bold mt-1 uppercase tracking-widest">
+                                <i class="bi bi-calendar-event"></i> Thn. {{ $item->tahun_kegiatan ?? '-' }}
+                            </div>
                         </td>
 
+                        {{-- KOLOM STATUS --}}
                         <td class="px-4 py-4 align-top text-center whitespace-nowrap">
                             @switch($item->status)
                                 @case('Approved') <span class="px-3 py-1 border border-green-200 text-[9px] font-black uppercase tracking-wider text-green-600 bg-green-50 rounded-lg w-full inline-block">Approved</span> @break
                                 @case('Pending') <span class="px-3 py-1 border border-orange-200 text-[9px] font-black uppercase tracking-wider text-orange-600 bg-orange-50 rounded-lg animate-pulse w-full inline-block">Pending</span> @break
                                 @case('Rejected') <span class="px-3 py-1 border border-red-200 text-[9px] font-black uppercase tracking-wider text-red-600 bg-red-50 rounded-lg w-full inline-block tooltip" title="{{ $item->catatan_penolakan }}">Rejected</span> @break
                             @endswitch
+                            <div class="text-[9px] text-gray-400 mt-1">{{ $item->created_at->format('d M Y') }}</div>
                         </td>
-                        
 
-                        {{-- ISI KOLOM DINAMIS (Berdasarkan ID) --}}
+                        {{-- ISI KOLOM DINAMIS --}}
                         @if(request('form_id') && isset($dynamicFields) && $dynamicFields->count() > 0)
                             @foreach($dynamicFields as $field)
                                 <td class="px-4 py-4 align-top max-w-[250px] border-l border-gray-50">
                                     @php 
-                                        // PANGGIL BERDASARKAN ID ($field->id)
                                         $val = $item->data_dinamis[$field->id] ?? '-'; 
                                         if(is_array($val)) $val = implode(', ', $val);
                                     @endphp
@@ -185,10 +179,6 @@
                                     @endif
                                 </td>
                             @endforeach
-                        @else
-                            <td class="px-4 py-4 align-top max-w-[200px] border-l border-gray-50">
-                                <div class="text-xs font-bold text-[#006633]">{{ $item->formPrestasi->nama_form ?? 'Formulir Dihapus' }}</div>
-                            </td>
                         @endif
 
                         {{-- STICKY ACTION --}}

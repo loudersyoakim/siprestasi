@@ -4,7 +4,7 @@
 
 <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <h3 class="text-xl font-black text-gray-800 tracking-tight">Struktur Akademik</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Struktur Akademik</h3>
     </div>
 </div>
 

@@ -90,8 +90,7 @@
         {{-- MENU MANAJEMEN SISTEM (SA, AD, FK, JR) --}}
         {{-- ================================================================= --}}
         @if(Auth::user()->role->kode_role !== 'MHS')
-            <div class="mt-5 mb-2 px-3 text-[10px] font-black tracking-widest text-gray-400 uppercase">Manajemen Sistem</div>
-
+            
             {{-- 2. MANAJEMEN AKUN --}}
             @if(Auth::user()->hasPermission('akun.view_list') || Auth::user()->hasPermission('akun.manage_role'))
             @php $isAkun = request()->is('*manajemen-akun*') || request()->is('*akun*'); @endphp
@@ -180,42 +179,57 @@
 
             {{-- 5. MANAJEMEN KONTEN --}}
             @if(Auth::user()->hasPermission('konten.manage_artikel') || Auth::user()->hasPermission('konten.publish_prestasi'))
-            @php $isKonten = request()->is('*/konten*'); @endphp
+            @php $isKonten = request()->routeIs('konten.*'); @endphp
             <div class="relative">
                 <button {{ $isKonten ? 'data-active=true' : '' }} class="nav-dropdown-toggle flex items-center justify-between w-full px-3 py-2.5 rounded-xl transition-all focus:outline-none text-sm font-bold {{ $isKonten ? 'bg-[#006633]/10 text-[#006633] shadow-[inset_4px_0_0_0_#006633]' : 'text-gray-600 hover:bg-[#006633]/5 hover:text-[#006633]' }}">
                     <div class="flex items-center gap-3"><i class="bi bi-newspaper text-lg"></i> <span>Manajemen Konten</span></div>
                     <i class="bi bi-chevron-down text-xs transition-transform {{ $isKonten ? 'rotate-180' : '' }}"></i>
                 </button>
-                <div class="{{ $isKonten ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-100 pl-3 py-1">
-                    @if(Auth::user()->hasPermission('konten.manage_artikel'))
-                    <a href="#" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]">Berita & Galeri</a>
-                    @endif
-                    @if(Auth::user()->hasPermission('konten.publish_prestasi'))
-                    <a href="#" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]">Rilis Publikasi</a>
-                    @endif
-                </div>
+              <div class="{{ $isKonten ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-100 pl-3 py-1">
+    
+    {{-- Gabungan Berita, Galeri & Rilis Publikasi --}}
+    @if(Auth::user()->hasPermission('konten.manage_artikel') || Auth::user()->hasPermission('konten.publish_prestasi'))
+    <a href="{{ route('konten.index') }}" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg {{ request()->routeIs('konten.index', 'konten.create', 'konten.edit') ? 'text-[#006633] bg-[#006633]/5' : 'text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]' }}">
+        Konten Publikasi
+    </a>
+
+    <a href="{{ route('konten.landing') }}" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg {{ request()->routeIs('konten.landing') ? 'text-[#006633] bg-[#006633]/5' : 'text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]' }}">
+        Konfigurasi Beranda
+    </a>
+    @endif
+
+</div>
             </div>
             @endif
 
-            {{-- 6. MASTER DATA & SISTEM --}}
+           {{-- 6. MASTER DATA & SISTEM --}}
             @if(Auth::user()->hasPermission('master.akademik') || Auth::user()->hasPermission('sistem.config'))
-            @php $isMaster = request()->is('*/struktur-akademik*') || request()->is('*/pengaturan-sistem*'); @endphp
+            @php 
+                $isMaster = request()->is('*/struktur-akademik*') || request()->is('*/pengaturan-sistem*') || request()->is('*/atribut-prestasi*'); 
+            @endphp
             <div class="relative">
                 <button {{ $isMaster ? 'data-active=true' : '' }} class="nav-dropdown-toggle flex items-center justify-between w-full px-3 py-2.5 rounded-xl transition-all focus:outline-none text-sm font-bold {{ $isMaster ? 'bg-[#006633]/10 text-[#006633] shadow-[inset_4px_0_0_0_#006633]' : 'text-gray-600 hover:bg-[#006633]/5 hover:text-[#006633]' }}">
                     <div class="flex items-center gap-3"><i class="bi bi-database-fill-gear text-lg"></i> <span>Master Data</span></div>
                     <i class="bi bi-chevron-down text-xs transition-transform {{ $isMaster ? 'rotate-180' : '' }}"></i>
                 </button>
                 <div class="{{ $isMaster ? 'block' : 'hidden' }} mt-1 ml-6 space-y-1 border-l-2 border-gray-100 pl-3 py-1">
+                    
                     @if(Auth::user()->hasPermission('master.akademik'))
                     <a href="{{ route('super_admin.struktur-akademik') }}" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg {{ request()->routeIs('super_admin.struktur-akademik') ? 'text-[#006633] font-bold bg-[#006633]/10' : 'text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]' }}">Struktur Akademik</a>
                     @endif
+                    
+                    {{-- Sub-menu Atribut Prestasi --}}
+                    @if(Auth::user()->hasPermission('sistem.config')) 
+                    <a href="{{ route('master.atribut.index') }}" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg {{ request()->routeIs('master.atribut.*') ? 'text-[#006633] font-bold bg-[#006633]/10' : 'text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]' }}">Atribut Prestasi</a>
+                    @endif
+
                     @if(Auth::user()->hasPermission('sistem.config'))
                     <a href="{{ route('pengaturan-sistem.index') }}" class="block py-2 px-3 text-sm font-bold transition-all rounded-lg {{ request()->routeIs('pengaturan-sistem.*') ? 'text-[#006633] font-bold bg-[#006633]/10' : 'text-gray-500 hover:bg-[#006633]/5 hover:text-[#006633]' }}">Pengaturan Sistem</a>
                     @endif
                 </div>
             </div>
             @endif
-
+            
             {{-- 7. LAPORAN & REKAP --}}
             @if(Auth::user()->hasPermission('laporan.generate'))
             @php $isLaporan = request()->is('*/laporan*'); @endphp

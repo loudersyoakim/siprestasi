@@ -17,7 +17,7 @@
     
     {{-- BREADCRUMB --}}
     <a href="{{ route('prestasi.formulir-prestasi.index') }}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-[#006633] transition-colors mb-6 uppercase tracking-widest text-[10px]">
-        <i class="bi bi-arrow-left text-sm"></i> Kembali ke Daftar Form
+            <i class="bi bi-arrow-left"></i> Kembali
     </a>
 
     {{-- HEADER FORM BUILDER --}}
@@ -48,6 +48,8 @@
             </span>
         </div>
     </div>
+
+    {{-- BLOK IDENTITAS (BAWAAN SISTEM) --}}
     <div class="mb-4 bg-blue-50/50 border border-dashed border-blue-200 rounded-[14px] p-4 flex flex-col md:flex-row md:items-center gap-3 opacity-70 select-none">
         <div class="flex items-start gap-3 w-full flex-1">
             <div class="shrink-0 w-8 h-8 bg-blue-100 border border-blue-200 rounded-lg flex items-center justify-center text-blue-500">
@@ -62,6 +64,59 @@
             </div>
         </div>
     </div>  
+
+    {{-- ======================================================= --}}
+    {{-- AREA PENGATURAN ATRIBUT STATIS DENGAN TOGGLE ON/OFF --}}
+    {{-- ======================================================= --}}
+    <div class="mb-6 bg-yellow-50/30 border border-yellow-200 rounded-[14px] p-4 md:p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-yellow-100 gap-3">
+            <div>
+                <h4 class="text-sm font-bold text-yellow-900 flex items-center gap-2"><i class="bi bi-star-fill text-yellow-500"></i> Atribut Utama (Bawaan Sistem)</h4>
+                <p class="text-[10px] text-yellow-700 mt-1">Aktifkan/nonaktifkan inputan bawaan sistem untuk kategori form ini.</p>
+            </div>
+            <button form="form-setting-statis" type="submit" class="shrink-0 text-[10px] font-bold bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors shadow-sm">
+                Simpan Pengaturan
+            </button>
+        </div>
+
+        <form id="form-setting-statis" action="{{ route('prestasi.formulir-prestasi.update-statis', $form->id) }}" method="POST" class="space-y-2">
+            @csrf @method('PUT')
+            
+            @php
+                $settings = is_string($form->setting_statis) ? json_decode($form->setting_statis, true) : ($form->setting_statis ?? []);
+                if(empty($settings)) {
+                    $settings = ['nama_kegiatan' => true, 'tingkat' => true, 'capaian' => true, 'tahun' => true, 'tanggal' => true];
+                }
+                
+                $staticFields = [
+                    'nama_kegiatan' => ['label' => 'Nama Kegiatan / Prestasi', 'tipe' => 'Teks Pendek'],
+                    'tingkat'       => ['label' => 'Tingkat Prestasi', 'tipe' => 'Dropdown (Master Data)'],
+                    'capaian'       => ['label' => 'Capaian Prestasi', 'tipe' => 'Dropdown (Master Data)'],
+                    'tahun'         => ['label' => 'Tahun Kegiatan', 'tipe' => 'Dropdown'],
+                    'tanggal'       => ['label' => 'Tanggal Pelaksanaan (Mulai & Selesai)', 'tipe' => 'Tanggal (Date)'],
+                ];
+            @endphp
+
+            @foreach($staticFields as $key => $data)
+            <div class="flex items-center justify-between bg-white border {{ ($settings[$key] ?? true) ? 'border-yellow-200' : 'border-gray-100 opacity-60' }} p-3 rounded-xl hover:border-yellow-300 transition-all">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg {{ ($settings[$key] ?? true) ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400' }} flex items-center justify-center shrink-0">
+                        <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold {{ ($settings[$key] ?? true) ? 'text-gray-800' : 'text-gray-400 line-through' }} leading-tight">{{ $data['label'] }}</div>
+                        <div class="text-[9px] font-bold {{ ($settings[$key] ?? true) ? 'text-yellow-600' : 'text-gray-400' }} uppercase tracking-widest mt-1">{{ $data['tipe'] }}</div>
+                    </div>
+                </div>
+                
+                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" name="setting_statis[{{ $key }}]" value="1" class="sr-only peer static-toggle" {{ ($settings[$key] ?? true) ? 'checked' : '' }} onchange="this.closest('.flex.items-center.justify-between').classList.toggle('opacity-60'); this.closest('.flex.items-center.justify-between').classList.toggle('border-yellow-200'); this.closest('.flex.items-center.justify-between').classList.toggle('border-gray-100');">
+                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
+                </label>
+            </div>
+            @endforeach
+        </form>
+    </div>
 
     {{-- AREA DAFTAR PERTANYAAN (DRAGGABLE) --}}
     <div class="space-y-2.5" id="sortable-list">
@@ -122,7 +177,7 @@
         </div>
         @empty
         <div class="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <p class="text-sm text-gray-400">Belum ada field pertanyaan.</p>
+            <p class="text-sm text-gray-400">Belum ada field pertanyaan dinamis.</p>
         </div>
         @endforelse
     </div>
@@ -166,7 +221,6 @@
                                 ['id' => 'select', 'icon' => 'bi-menu-button-wide', 'title' => 'Dropdown'],
                                 ['id' => 'radio', 'icon' => 'bi-ui-radios', 'title' => 'Radio'],
                                 ['id' => 'checkbox', 'icon' => 'bi-ui-checks', 'title' => 'Ceklis'],
-                                // ['id' => 'anggota_kelompok', 'icon' => 'bi-people', 'title' => 'Mhs'],
                             ];
                         @endphp
                         @foreach($types as $type)
@@ -246,7 +300,6 @@
                             <option value="select">Dropdown</option>
                             <option value="radio">Radio Button</option>
                             <option value="checkbox">Checkbox</option>
-                            {{-- <option value="anggota_kelompok">Mahasiswa</option> --}}
                         </select>
                     </div>
                 </div>

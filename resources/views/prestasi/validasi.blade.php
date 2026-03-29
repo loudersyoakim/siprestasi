@@ -3,7 +3,7 @@
 @section('content')
 <div class="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <h3 class="text-xl font-black text-gray-800 tracking-tight">Validasi Prestasi</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Validasi Prestasi</h3>
     </div>
 </div>
 

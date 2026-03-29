@@ -3,7 +3,7 @@
 @section('content')
 <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
-        <h3 class="text-xl font-black text-gray-800 tracking-tight">Formulir Prestasi</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Formulir Prestasi</h3>
     </div>
     <button onclick="openModal('modal-tambah-kategori')" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#004d26] transition-colors shadow-sm cursor-pointer">
         <i class="bi bi-plus-lg"></i> <span>Buat Formulir Baru</span>

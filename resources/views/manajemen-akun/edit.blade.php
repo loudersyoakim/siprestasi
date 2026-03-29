@@ -4,9 +4,9 @@
 <div class="mb-4">
     <a href="{{ route(Auth::user()->role->kode_role == 'SA' ? 'super_admin.manajemen-akun' : 'admin.manajemen-akun') }}" 
        class="text-[10px] font-bold text-gray-400 hover:text-[#006633] flex items-center gap-1.5 mb-1 transition-all">
-        <i class="bi bi-arrow-left"></i> KEMBALI
+            <i class="bi bi-arrow-left"></i> Kembali
     </a>
-    <h3 class="text-lg font-black text-gray-800 tracking-tight">Edit Akun</h3>
+    <h3 class="text-2xl font-black text-gray-800 tracking-tight">Edit Akun</h3>
 </div>
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">

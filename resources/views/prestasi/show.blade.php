@@ -4,9 +4,9 @@
 <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
     <div>
         <a href="{{ route('prestasi.index-all') }}" class="text-sm font-bold text-gray-400 hover:text-[#006633] transition-colors flex items-center gap-2">
-            <i class="bi bi-arrow-left"></i> Kembali ke Daftar
+            <i class="bi bi-arrow-left"></i> Kembali
         </a>
-        <h3 class="text-xl font-black text-gray-800 tracking-tight mt-2">Detail Data Prestasi</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Detail Data Prestasi</h3>
     </div>
 
     <div class="flex items-center gap-3">
@@ -38,63 +38,64 @@
                     <span class="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 text-orange-600 text-xs font-black uppercase tracking-wider rounded-xl"><i class="bi bi-clock-history text-base animate-pulse"></i> Menunggu Validasi</span>
                 @break
                 @case('Rejected')
-                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs font-black uppercase tracking-wider rounded-xl"><i class="bi bi-x-circle-fill text-base"></i> Ditolak</span>
+                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs font-black uppercase tracking-wider rounded-xl tooltip" title="{{ $prestasi->pesan_revisi }}"><i class="bi bi-x-circle-fill text-base"></i> Ditolak</span>
                 @break
             @endswitch
         </div>
     </div>
 
     {{-- ISI DOKUMEN (LIST DATA MINIMALIS) --}}
-    <div class="px-6 py-6 sm:px-10 sm:py-8">
+    <div class="px-6 py-6 sm:px-10 sm:py-8 space-y-8">
         
         {{-- BAGIAN 1: IDENTITAS (STATIS DARI SISTEM) --}}
-        <div class="mb-8">
+        <div>
             <h5 class="text-xs font-black text-gray-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4"><i class="bi bi-person-vcard text-[#006633] mr-2"></i> Identitas Kepesertaan</h5>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
                 
                 {{-- Pelapor / Ketua --}}
                 <div>
-    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ketua Tim</div>
-    <div class="text-sm font-bold text-gray-800">{{ $prestasi->user->name ?? '-' }}</div>
-    <div class="text-xs font-medium text-gray-500 mt-1">
-        {{ $prestasi->user->nim_nip ?? '-' }} • 
-        <span class="text-[#006633]">{{ $prestasi->user->prodi?->nama_prodi ?? 'Prodi Belum Diset' }}</span> • 
-        {{ $prestasi->user->prodi?->jurusan?->fakultas?->nama_fakultas ?? 'Fakultas Belum Diset' }}
-    </div>
-</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ketua Tim / Pelapor</div>
+                    <div class="text-sm font-bold text-gray-800">{{ $prestasi->user->name ?? '-' }}</div>
+                    <div class="text-xs font-medium text-gray-500 mt-1">
+                        {{ $prestasi->user->nim_nip ?? '-' }} • 
+                        <span class="text-[#006633] font-bold">{{ $prestasi->user->prodi?->nama_prodi ?? 'Prodi Belum Diset' }}</span>
+                    </div>
+                </div>
 
                 {{-- Waktu Lapor --}}
                 <div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Waktu Pelaporan</div>
-                    <div class="text-sm font-medium text-gray-800">{{ $prestasi->created_at->translatedFormat('l, d F Y') }}</div>
+                    <div class="text-sm font-bold text-gray-800">{{ $prestasi->created_at->translatedFormat('l, d F Y') }}</div>
                     <div class="text-xs font-medium text-gray-500 mt-1">{{ $prestasi->created_at->format('H:i') }} WIB</div>
                 </div>
 
-               @php
+                @php
                     $dataDinamis = is_string($prestasi->data_dinamis) ? json_decode($prestasi->data_dinamis, true) : ($prestasi->data_dinamis ?? []);
                     $manualMembers = $dataDinamis['anggota_manual'] ?? [];
                 @endphp
 
                 @if($prestasi->anggota->count() > 0 || count($manualMembers) > 0)
-                <div class="md:col-span-2">
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Anggota Tim</div>
-                    <ul class="list-none space-y-2">
-                        
-                        {{-- FIX: Langsung panggil $anggota->name karena ini adalah model User! --}}
+                <div class="md:col-span-2 bg-gray-50/50 border border-gray-100 p-4 rounded-2xl">
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Daftar Anggota Tim</div>
+                    <ul class="list-none space-y-2.5">
                         @foreach($prestasi->anggota as $anggota)
-                            <li class="flex items-center gap-2 text-sm">
-                                <i class="bi bi-person-fill text-gray-300"></i>
-                                <span class="font-bold text-gray-800">{{ $anggota->name }}</span>
-                                <span class="text-gray-400 text-xs">({{ $anggota->nim_nip }})</span>
+                            <li class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] font-black"><i class="bi bi-person-fill"></i></div>
+                                <div>
+                                    <span class="font-bold text-gray-800">{{ $anggota->name }}</span>
+                                    <span class="text-gray-400 text-xs ml-1">({{ $anggota->nim_nip }})</span>
+                                </div>
                             </li>
                         @endforeach
                         
                         @foreach($manualMembers as $man)
-                            <li class="flex items-center gap-2 text-sm">
-                                <i class="bi bi-person text-orange-300"></i>
-                                <span class="font-bold text-gray-800">{{ $man['nama'] }}</span>
-                                <span class="text-orange-500 text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-orange-50 rounded-md">Manual</span>
+                            <li class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center text-[10px] font-black"><i class="bi bi-person"></i></div>
+                                <div>
+                                    <span class="font-bold text-gray-800">{{ $man['nama'] }}</span>
+                                    <span class="text-orange-500 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-orange-50 rounded-md ml-1">Input Manual</span>
+                                </div>
                             </li>
                         @endforeach
                     </ul>
@@ -103,15 +104,49 @@
             </div>
         </div>
 
-        {{-- BAGIAN 2: DATA PRESTASI (DINAMIS DARI JSON) --}}
+        {{-- BAGIAN 2: INFORMASI UTAMA PRESTASI (DATA STATIS) --}}
         <div>
-            <h5 class="text-xs font-black text-gray-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4"><i class="bi bi-trophy text-[#006633] mr-2"></i> Rincian Kegiatan & Prestasi</h5>
+            <h5 class="text-xs font-black text-yellow-600 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4"><i class="bi bi-star-fill text-yellow-500 mr-2"></i> Informasi Utama Prestasi</h5>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10 bg-yellow-50/30 border border-yellow-100 p-5 rounded-3xl">
+                
+                <div class="md:col-span-2">
+                    <div class="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1.5">Nama Kegiatan / Prestasi</div>
+                    <div class="text-lg font-black text-gray-800 leading-tight">{{ $prestasi->nama_kegiatan ?: '-' }}</div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Tingkat Prestasi</div>
+                    <div class="text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">{{ $prestasi->tingkatPrestasi->nama_tingkat ?? '-' }}</div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Capaian Prestasi</div>
+                    <div class="text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg inline-block shadow-sm">{{ $prestasi->capaianPrestasi->nama_capaian ?? '-' }}</div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Waktu Pelaksanaan</div>
+                    <div class="text-sm font-bold text-gray-800">
+                        {{ $prestasi->tahun_kegiatan ?? '-' }} 
+                        <span class="text-gray-400 font-medium text-xs ml-1 block mt-1">
+                            ( {{ $prestasi->tanggal_mulai ? $prestasi->tanggal_mulai->format('d M Y') : '?' }} 
+                            {{ $prestasi->tanggal_selesai ? ' s/d '.$prestasi->tanggal_selesai->format('d M Y') : '' }} )
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- BAGIAN 3: DATA TAMBAHAN (DINAMIS DARI JSON) --}}
+        <div>
+            <h5 class="text-xs font-black text-gray-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4"><i class="bi bi-card-list text-[#006633] mr-2"></i> Detail Informasi Tambahan</h5>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
                 @foreach($fields as $field)
                     @php 
-                        // AMBIL DATA DARI JSON BERDASARKAN ID
-                        $nilai = $prestasi->data_dinamis[$field->id] ?? '-'; 
+                        $nilai = $dataDinamis[$field->id] ?? '-'; 
                         $isFile = $field->tipe === 'file';
                         $isArray = is_array($nilai);
                         
@@ -123,17 +158,17 @@
                         <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{ $field->label }}</div>
                         
                         @if($isFile && $nilai !== '-')
-                            <a href="{{ asset('storage/' . $nilai) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-600 hover:text-white transition-colors">
-                                <i class="bi bi-file-earmark-arrow-down-fill"></i> Lihat Dokumen Lampiran
+                            <a href="{{ asset('storage/' . $nilai) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                <i class="bi bi-file-earmark-arrow-down-fill text-base"></i> Lihat Dokumen Lampiran
                             </a>
                         @elseif($isArray)
                             <div class="flex flex-wrap gap-1.5 mt-1">
                                 @foreach($nilai as $n)
-                                    <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-md border border-gray-200">{{ $n }}</span>
+                                    <span class="px-2.5 py-1 bg-gray-50 text-gray-700 text-xs font-bold rounded-lg border border-gray-200">{{ $n }}</span>
                                 @endforeach
                             </div>
                         @else
-                            <div class="text-sm font-medium text-gray-900 leading-relaxed whitespace-pre-wrap">{{ $nilai ?: '-' }}</div>
+                            <div class="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">{{ $nilai ?: '-' }}</div>
                         @endif
                     </div>
                 @endforeach

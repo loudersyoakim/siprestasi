@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Prodi;
+use App\Models\Fakultas; // Tambahkan Fakultas
 use App\Models\Permission;
 use App\Imports\UsersImport;
 use App\Exports\TemplateAkunExport;
@@ -13,11 +14,51 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ManajemenAkunController extends Controller
 {
+    // ========================================================
+    // HELPER: EKSTRAK PRODI & ANGKATAN DARI NIM
+    // ========================================================
+    public function parseNimData($nim)
+    {
+        $result = [
+            'prodi_id' => null,
+            'angkatan' => null
+        ];
+
+        if (empty($nim) || strlen($nim) < 7) {
+            return $result; // Kosongkan jika format kurang dari standar
+        }
+
+        // 1. Ekstrak Angkatan (Ambil digit index 1 & 2 -> "22" jadi "2022")
+        $kodeAngkatan = substr($nim, 1, 2);
+        if (is_numeric($kodeAngkatan)) {
+            $result['angkatan'] = '20' . $kodeAngkatan;
+        }
+
+        // 2. Ekstrak Fakultas & Prodi
+        $kodeFakultas = substr($nim, 0, 1);
+        $kodeProdi = substr($nim, 5, 2);
+
+        $fakultas = Fakultas::where('kode_fakultas', $kodeFakultas)->first();
+        if ($fakultas) {
+            $prodi = Prodi::where('kode_prodi', $kodeProdi)
+                ->whereHas('jurusan', function ($q) use ($fakultas) {
+                    $q->where('fakultas_id', $fakultas->id);
+                })->first();
+
+            if ($prodi) {
+                $result['prodi_id'] = $prodi->id;
+            }
+        }
+
+        return $result;
+    }
+
     /**
      * Daftar Akun (Index) dengan Search, Filter, dan Sort
      */
@@ -77,7 +118,6 @@ class ManajemenAkunController extends Controller
             'email'     => 'nullable|email|unique:users',
             'role_id'   => 'required|exists:roles,id',
             'password'  => 'nullable|min:8|confirmed',
-            // is_active tidak perlu 'required' agar bisa bernilai false/0
             'is_active' => 'boolean',
         ]);
 
@@ -87,20 +127,33 @@ class ManajemenAkunController extends Controller
             return back()->with('error', 'Anda tidak diizinkan membuat akun Super Admin!');
         }
 
-        // Logika password default jika kosong
         $passwordFinal = $request->filled('password')
             ? Hash::make($request->password)
             : Hash::make($request->nim_nip);
+
+        // --- Ekstrak Data dari NIM ---
+        $prodiIdFinal = $request->prodi_id;
+        $angkatanFinal = null;
+
+        if ($roleDipilih->kode_role === 'MHS') {
+            $nimData = $this->parseNimData($request->nim_nip);
+
+            // Jika prodi tidak diisi manual dari form, pakai hasil ekstrak
+            if (empty($prodiIdFinal)) {
+                $prodiIdFinal = $nimData['prodi_id'];
+            }
+            // Angkatan selalu otomatis ditarik dari NIM
+            $angkatanFinal = $nimData['angkatan'];
+        }
 
         User::create([
             'name'      => $request->name,
             'nim_nip'   => $request->nim_nip,
             'email'     => $request->email,
             'role_id'   => $request->role_id,
-            // Cek apakah prodi_id ada di request, jika tidak biarkan null
-            'prodi_id'  => $request->prodi_id ?? null,
+            'prodi_id'  => $prodiIdFinal,
+            'angkatan'  => $angkatanFinal, // SIMPAN ANGKATAN
             'password'  => $passwordFinal,
-            // Default ke 1 jika tidak ada di request
             'is_active' => $request->has('is_active') ? $request->is_active : 1,
         ]);
 
@@ -111,7 +164,6 @@ class ManajemenAkunController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Mencegah Admin yang mencoba edit SA
         if (Auth::user()->role->kode_role !== 'SA' && $user->role->kode_role === 'SA') {
             return redirect()->route('super_admin.manajemen-akun')->with('error', 'Akses Ditolak! Anda tidak bisa mengedit Super Admin.');
         }
@@ -120,6 +172,7 @@ class ManajemenAkunController extends Controller
         $prodis = Prodi::all();
         return view("manajemen-akun.edit", compact('user', 'roles', 'prodis'));
     }
+
     public function updateAkun(Request $request, $id)
     {
         $user = User::findOrFail($id);
@@ -134,7 +187,7 @@ class ManajemenAkunController extends Controller
             'email'     => 'nullable|email|max:255|unique:users,email,' . $id,
             'nim_nip'   => 'required|string|unique:users,nim_nip,' . $id,
             'role_id'   => 'required|exists:roles,id',
-            'is_active' => 'boolean', // Hapus 'required'
+            'is_active' => 'boolean',
         ]);
 
         $dataUpdate = [
@@ -142,12 +195,21 @@ class ManajemenAkunController extends Controller
             'email'     => $request->email,
             'nim_nip'   => $request->nim_nip,
             'role_id'   => $request->role_id,
-            'is_active' => $request->is_active ?? 0, // Jika tidak ada (uncheck), set ke 0
+            'is_active' => $request->is_active ?? 0,
         ];
 
-        // Update prodi_id HANYA JIKA dikirim dari form
-        if ($request->has('prodi_id')) {
+        if ($request->has('prodi_id') && !empty($request->prodi_id)) {
             $dataUpdate['prodi_id'] = $request->prodi_id;
+        }
+
+        // --- Ekstrak Data Ulang jika dia Mahasiswa ---
+        if ($roleDipilih->kode_role === 'MHS') {
+            $nimData = $this->parseNimData($request->nim_nip);
+
+            if (empty($dataUpdate['prodi_id'])) {
+                $dataUpdate['prodi_id'] = $nimData['prodi_id'];
+            }
+            $dataUpdate['angkatan'] = $nimData['angkatan']; // UPDATE ANGKATAN
         }
 
         if ($request->filled('password')) {
@@ -187,26 +249,24 @@ class ManajemenAkunController extends Controller
     {
         $request->validate([
             'ids' => 'required|array',
-            'bulk_action' => 'required|in:activate,deactivate,delete' // FIX: Tambah deactivate
+            'bulk_action' => 'required|in:activate,deactivate,delete'
         ]);
 
         $ids = $request->ids;
         $saRoleId = Role::where('kode_role', 'SA')->value('id');
 
-        // AKSI 1: AKTIVASI MASSAL
         if ($request->bulk_action === 'activate') {
             User::whereIn('id', $ids)->update(['is_active' => 1]);
             return back()->with('success', count($ids) . ' akun berhasil diaktivasi!');
         }
 
-        // AKSI 2: NONAKTIFKAN MASSAL
         if ($request->bulk_action === 'deactivate') {
             User::whereIn('id', $ids)
-                ->where('id', '!=', Auth::id()) // Cegah nonaktifkan akun sendiri
-                ->where('role_id', '!=', $saRoleId) // Cegah nonaktifkan Super Admin
+                ->where('id', '!=', Auth::id())
+                ->where('role_id', '!=', $saRoleId)
                 ->update(['is_active' => 0]);
 
-            return back()->with('success', count($ids) . ' akun berhasil dinonaktifkan (dikembalikan ke status Pending)!');
+            return back()->with('success', count($ids) . ' akun berhasil dinonaktifkan!');
         }
 
         if ($request->bulk_action === 'delete') {
@@ -218,7 +278,6 @@ class ManajemenAkunController extends Controller
         }
     }
 
-
     public function importAkun(Request $request)
     {
         $request->validate([
@@ -228,11 +287,9 @@ class ManajemenAkunController extends Controller
         $userId = Auth::id();
         $cacheKey = "import_progress_{$userId}";
 
-        // Simpan file
         $path = $request->file('file')->store('temp-imports', 'local');
         $fullPath = Storage::disk('local')->path($path);
 
-        // Hitung baris TANPA load semua ke memory
         $reader = IOFactory::createReaderForFile($fullPath);
         $reader->setReadDataOnly(true);
 
@@ -248,7 +305,6 @@ class ManajemenAkunController extends Controller
             return back()->with('error', 'File kosong atau tidak valid.');
         }
 
-        // Init progress
         Cache::put($cacheKey, [
             'current' => 0,
             'total' => $totalRows,
@@ -256,7 +312,6 @@ class ManajemenAkunController extends Controller
             'message' => 'Memulai import...'
         ], now()->addHours(2));
 
-        // Jalankan queue
         Excel::queueImport(
             new UsersImport($userId, $cacheKey),
             $path,
@@ -269,7 +324,6 @@ class ManajemenAkunController extends Controller
     public function checkImportStatus()
     {
         $cacheKey = 'import_progress_' . Auth::id();
-
         return response()->json(
             Cache::get($cacheKey, [
                 'current' => 0,
@@ -283,7 +337,6 @@ class ManajemenAkunController extends Controller
     public function clearImportStatus()
     {
         Cache::forget('import_progress_' . Auth::id());
-
         return response()->json(['status' => 'cleared']);
     }
 
@@ -292,14 +345,44 @@ class ManajemenAkunController extends Controller
         return Excel::download(new TemplateAkunExport, 'template_import_akun.xlsx');
     }
 
+    // ========================================================
+    // SINKRONISASI DATA LAMA (Jalankan sekali via Route / Tombol UI)
+    // ========================================================
+    public function syncProdiLama()
+    {
+        // Ambil mahasiswa yang prodi-nya ATAU angkatannya masih kosong
+        $users = User::whereHas('role', fn($q) => $q->where('kode_role', 'MHS'))
+            ->where(function ($query) {
+                $query->whereNull('prodi_id')
+                    ->orWhereNull('angkatan');
+            })->get();
+
+        $countUpdated = 0;
+
+        foreach ($users as $user) {
+            $nimData = $this->parseNimData($user->nim_nip);
+
+            $updateFields = [];
+            if (empty($user->prodi_id) && !empty($nimData['prodi_id'])) {
+                $updateFields['prodi_id'] = $nimData['prodi_id'];
+            }
+            if (empty($user->angkatan) && !empty($nimData['angkatan'])) {
+                $updateFields['angkatan'] = $nimData['angkatan'];
+            }
+
+            if (!empty($updateFields)) {
+                $user->update($updateFields);
+                $countUpdated++;
+            }
+        }
+
+        return back()->with('success', "Berhasil mensinkronkan {$countUpdated} data mahasiswa lama dengan Master Prodi dan Angkatan!");
+    }
 
     public function indexRolePermission(Request $request)
     {
-        // Ambil semua Role (SA, AD, FK, JR, MHS)
         $roles = Role::all();
-
         $permissionsGrouped = Permission::with('roles')->get()->groupBy('modul');
-
         $stats = [
             'total_permissions' => Permission::count(),
             'role_counts' => $roles->mapWithKeys(function ($role) {
@@ -312,7 +395,6 @@ class ManajemenAkunController extends Controller
 
     public function updateRolePermission(Request $request)
     {
-        // 1. Validasi input
         $request->validate([
             'role_id'       => 'required',
             'permission_id' => 'required',
@@ -322,22 +404,18 @@ class ManajemenAkunController extends Controller
         $roleId = (int) $request->role_id;
         $permId = (int) $request->permission_id;
 
-        // 2. Proteksi Super Admin (SA) - ID 1 biasanya SA
         if ($roleId === 1) {
             return response()->json(['success' => false, 'message' => 'Izin Super Admin mutlak.'], 403);
         }
 
         try {
-            // 3. PAKSA TEMBAK LANGSUNG KE TABEL PIVOT
             if ($request->action === 'attach') {
-                // Gunakan updateOrInsert untuk mencegah error "Duplicate Entry"
-                \Illuminate\Support\Facades\DB::table('role_permissions')->updateOrInsert(
+                DB::table('role_permissions')->updateOrInsert(
                     ['role_id' => $roleId, 'permission_id' => $permId],
                     ['role_id' => $roleId, 'permission_id' => $permId]
                 );
             } else {
-                // Hapus data langsung
-                \Illuminate\Support\Facades\DB::table('role_permissions')
+                DB::table('role_permissions')
                     ->where('role_id', $roleId)
                     ->where('permission_id', $permId)
                     ->delete();

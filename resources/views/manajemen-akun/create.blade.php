@@ -5,9 +5,9 @@
     <div>
         <a href="{{ route('super_admin.manajemen-akun') }}" 
            class="text-[10px] font-bold text-gray-400 hover:text-[#006633] flex items-center gap-1.5 mb-1 transition-all">
-            <i class="bi bi-arrow-left"></i> KEMBALI
+            <i class="bi bi-arrow-left"></i> Kembali
         </a>
-        <h3 class="text-lg font-black text-gray-800 tracking-tight">Tambah Akun</h3>
+        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Tambah Akun</h3>
     </div>
 
     {{-- Tombol Pemicu Modal Import --}}

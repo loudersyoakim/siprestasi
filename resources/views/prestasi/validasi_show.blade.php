@@ -3,9 +3,9 @@
 @section('content')
 <div class="mb-6">
     <a href="{{ route('prestasi.validasi') }}" class="text-sm font-bold text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-2">
-        <i class="bi bi-arrow-left"></i> Kembali ke Antrean
+            <i class="bi bi-arrow-left"></i> Kembali
     </a>
-    <h3 class="text-xl font-bold text-gray-800 tracking-tight mt-2">Lembar Verifikasi Prestasi</h3>
+    <h3 class="text-2xl font-black text-gray-800 tracking-tight">Lembar Verifikasi Prestasi</h3>
 </div>
 
 <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-10">

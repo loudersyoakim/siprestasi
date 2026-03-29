@@ -7,6 +7,8 @@ use App\Models\FormPrestasi;
 use App\Models\FieldFormPrestasi;
 use App\Models\User;
 use App\Models\AlurPersetujuan;
+use App\Models\TingkatPrestasi;
+use App\Models\CapaianPrestasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -17,12 +19,13 @@ class PrestasiController extends Controller
 {
     public function indexPrestasi(Request $request)
     {
-        $query = Prestasi::with(['user', 'formPrestasi', 'anggota']);
+        $query = Prestasi::with(['user', 'formPrestasi', 'anggota', 'tingkatPrestasi', 'capaianPrestasi']);
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                    ->orWhere('nama_kegiatan', 'like', "%{$search}%")
                     ->orWhere('data_dinamis', 'like', "%{$search}%");
             });
         }
@@ -61,28 +64,41 @@ class PrestasiController extends Controller
         }
 
         $mahasiswa = User::whereHas('role', fn($q) => $q->where('kode_role', 'MHS'))->get();
-        return view('prestasi.create', compact('forms', 'selectedForm', 'mahasiswa'));
+        $tingkat_list = TingkatPrestasi::where('is_active', true)->orderBy('nama_tingkat')->get();
+        $capaian_list = CapaianPrestasi::where('is_active', true)->orderBy('nama_capaian')->get();
+
+        return view('prestasi.create', compact('forms', 'selectedForm', 'mahasiswa', 'tingkat_list', 'capaian_list'));
     }
 
     public function store(Request $request)
     {
         $formId = $request->form_prestasi_id;
+        $form = FormPrestasi::findOrFail($formId);
         $fields = FieldFormPrestasi::where('form_prestasi_id', $formId)->get();
+
+        // Ambil Setting Statis
+        $settings = is_string($form->setting_statis) ? json_decode($form->setting_statis, true) : ($form->setting_statis ?? []);
 
         $rules = [
             'form_prestasi_id' => 'required|exists:form_prestasis,id',
             'user_ids'         => 'required|array|min:1',
         ];
 
+        // VALIDASI KOLOM STATIS (Hanya jika aktif di setting)
+        if ($settings['nama_kegiatan'] ?? true) $rules['nama_kegiatan'] = 'required|string|max:255';
+        if ($settings['tingkat'] ?? true) $rules['tingkat_prestasi_id'] = 'required|exists:tingkat_prestasis,id';
+        if ($settings['capaian'] ?? true) $rules['capaian_prestasi_id'] = 'required|exists:capaian_prestasis,id';
+        if ($settings['tahun'] ?? true) $rules['tahun_kegiatan'] = 'required|integer';
+        if ($settings['tanggal'] ?? true) {
+            $rules['tanggal_mulai'] = 'required|date';
+            $rules['tanggal_selesai'] = 'nullable|date|after_or_equal:tanggal_mulai';
+        }
+
+        // Validasi Form Dinamis
         foreach ($fields as $field) {
             if ($field->tipe === 'anggota_kelompok') continue;
-
-            if ($field->is_required && $field->tipe !== 'file') {
-                $rules['field_' . $field->id] = 'required';
-            }
-            if ($field->tipe === 'file') {
-                $rules['field_' . $field->id] = $field->is_required ? 'required|file|max:10240' : 'nullable|file|max:10240';
-            }
+            if ($field->is_required && $field->tipe !== 'file') $rules['field_' . $field->id] = 'required';
+            if ($field->tipe === 'file') $rules['field_' . $field->id] = $field->is_required ? 'required|file|max:10240' : 'nullable|file|max:10240';
         }
 
         $request->validate($rules);
@@ -123,26 +139,26 @@ class PrestasiController extends Controller
                 $dataDinamis['anggota_manual'] = $anggotaManual;
             }
 
-            // =========================================================
-            // LOGIKA SUPER CERDAS: CEK ALUR & ROLE (AUTO APPROVE)
-            // =========================================================
             $rolePelapor = Auth::user()->role->kode_role ?? 'MHS';
-
             if ($rolePelapor !== 'MHS') {
-                // Jika Staff/Admin yang input, otomatis Approve
                 $statusAwal = 'Approved';
             } else {
-                // Jika Mahasiswa, cek apakah ada alur yang nyala
                 $adaAlurAktif = AlurPersetujuan::where('is_active', true)->exists();
-                // Jika semua alur dimatikan, bypass jadi Approved. Jika ada yg aktif, Pending.
                 $statusAwal = $adaAlurAktif ? 'Pending' : 'Approved';
             }
 
             $prestasi = Prestasi::create([
-                'user_id'          => $mainUserId,
-                'form_prestasi_id' => $formId,
-                'data_dinamis'     => $dataDinamis,
-                'status'           => $statusAwal,
+                'user_id'             => $mainUserId,
+                'form_prestasi_id'    => $formId,
+                'status'              => $statusAwal,
+                // Kolom Statis (Bakal null otomatis kalau inputannya dimatikan)
+                'nama_kegiatan'       => $request->nama_kegiatan,
+                'tingkat_prestasi_id' => $request->tingkat_prestasi_id,
+                'capaian_prestasi_id' => $request->capaian_prestasi_id,
+                'tahun_kegiatan'      => $request->tahun_kegiatan,
+                'tanggal_mulai'       => $request->tanggal_mulai,
+                'tanggal_selesai'     => $request->tanggal_selesai,
+                'data_dinamis'        => $dataDinamis,
             ]);
 
             for ($i = 1; $i < count($userIdsRaw); $i++) {
@@ -168,7 +184,7 @@ class PrestasiController extends Controller
 
     public function show($id)
     {
-        $prestasi = Prestasi::with(['user', 'formPrestasi', 'anggota'])->findOrFail($id);
+        $prestasi = Prestasi::with(['user', 'formPrestasi', 'anggota', 'tingkatPrestasi', 'capaianPrestasi'])->findOrFail($id);
         $fields = FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)
             ->where('tipe', '!=', 'anggota_kelompok')
             ->orderBy('urutan', 'asc')->get();
@@ -178,11 +194,13 @@ class PrestasiController extends Controller
 
     public function edit($id)
     {
-        $prestasi = Prestasi::with(['user', 'anggota'])->findOrFail($id);
+        $prestasi = Prestasi::with(['user', 'anggota', 'tingkatPrestasi', 'capaianPrestasi', 'formPrestasi'])->findOrFail($id);
         $fields = FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)
             ->orderBy('urutan', 'asc')->get();
 
         $mahasiswa = User::whereHas('role', fn($q) => $q->where('kode_role', 'MHS'))->get();
+        $tingkat_list = TingkatPrestasi::where('is_active', true)->orderBy('nama_tingkat')->get();
+        $capaian_list = CapaianPrestasi::where('is_active', true)->orderBy('nama_capaian')->get();
 
         $mahasiswaTerpilih = [];
         $mahasiswaTerpilih[] = $prestasi->user_id . '|' . $prestasi->user->name . '|' . $prestasi->user->nim_nip;
@@ -199,16 +217,30 @@ class PrestasiController extends Controller
         }
 
         $prestasi->data_dinamis = $dataDinamis;
-        return view('prestasi.edit', compact('prestasi', 'fields', 'mahasiswa', 'mahasiswaTerpilih'));
+
+        return view('prestasi.edit', compact('prestasi', 'fields', 'mahasiswa', 'mahasiswaTerpilih', 'tingkat_list', 'capaian_list'));
     }
 
     public function update(Request $request, $id)
     {
         $prestasi = Prestasi::findOrFail($id);
         $formId = $prestasi->form_prestasi_id;
+        $form = FormPrestasi::findOrFail($formId);
         $fields = FieldFormPrestasi::where('form_prestasi_id', $formId)->get();
 
+        $settings = is_string($form->setting_statis) ? json_decode($form->setting_statis, true) : ($form->setting_statis ?? []);
+
         $rules = ['user_ids' => 'required|array|min:1'];
+
+        if ($settings['nama_kegiatan'] ?? true) $rules['nama_kegiatan'] = 'required|string|max:255';
+        if ($settings['tingkat'] ?? true) $rules['tingkat_prestasi_id'] = 'required|exists:tingkat_prestasis,id';
+        if ($settings['capaian'] ?? true) $rules['capaian_prestasi_id'] = 'required|exists:capaian_prestasis,id';
+        if ($settings['tahun'] ?? true) $rules['tahun_kegiatan'] = 'required|integer';
+        if ($settings['tanggal'] ?? true) {
+            $rules['tanggal_mulai'] = 'required|date';
+            $rules['tanggal_selesai'] = 'nullable|date|after_or_equal:tanggal_mulai';
+        }
+
         foreach ($fields as $field) {
             if ($field->tipe === 'anggota_kelompok') continue;
             if ($field->is_required && $field->tipe !== 'file') $rules['field_' . $field->id] = 'required';
@@ -248,12 +280,8 @@ class PrestasiController extends Controller
             }
             $dataDinamis['anggota_manual'] = $anggotaManual;
 
-            // =========================================================
-            // JIKA MHS EDIT DATA, RESET KE PENDING (Atau Bypass Approved)
-            // Jika Admin yg edit, biarkan statusnya tetap yg terakhir
-            // =========================================================
             $rolePelapor = Auth::user()->role->kode_role ?? 'MHS';
-            $statusAkhir = $prestasi->status; // Default: pertahankan status saat ini
+            $statusAkhir = $prestasi->status;
 
             if ($rolePelapor === 'MHS') {
                 $adaAlurAktif = AlurPersetujuan::where('is_active', true)->exists();
@@ -261,9 +289,15 @@ class PrestasiController extends Controller
             }
 
             $prestasi->update([
-                'user_id'      => $mainUserId,
-                'data_dinamis' => $dataDinamis,
-                'status'       => $statusAkhir,
+                'user_id'             => $mainUserId,
+                'status'              => $statusAkhir,
+                'nama_kegiatan'       => $request->nama_kegiatan,
+                'tingkat_prestasi_id' => $request->tingkat_prestasi_id,
+                'capaian_prestasi_id' => $request->capaian_prestasi_id,
+                'tahun_kegiatan'      => $request->tahun_kegiatan,
+                'tanggal_mulai'       => $request->tanggal_mulai,
+                'tanggal_selesai'     => $request->tanggal_selesai,
+                'data_dinamis'        => $dataDinamis,
             ]);
 
             DB::table('anggota_prestasis')->where('prestasi_id', $prestasi->id)->delete();
@@ -303,18 +337,15 @@ class PrestasiController extends Controller
         return back()->with('success', 'Data prestasi berhasil dihapus permanen.');
     }
 
-    /**
-     * 8. Halaman Manajemen Alur Persetujuan
-     */
+    // ========================================================
+    // 8. ALUR PERSETUJUAN & VALIDASI
+    // ========================================================
     public function alurPersetujuan()
     {
         $alur = AlurPersetujuan::orderBy('urutan', 'asc')->get();
         return view('prestasi.alur_persetujuan', compact('alur'));
     }
 
-    /**
-     * 9. Simpan Perubahan Alur Persetujuan
-     */
     public function updateAlur(Request $request)
     {
         try {
@@ -335,23 +366,17 @@ class PrestasiController extends Controller
         }
     }
 
-    /**
-     * 10. Halaman Antrean Validasi
-     */
     public function validasiPrestasi(Request $request)
     {
-        // Cek tab aktif dari URL, default ke 'pending'
         $tab = $request->get('tab', 'pending');
 
-        // Data yang belum divalidasi
-        $pending = Prestasi::with(['user', 'formPrestasi', 'anggota'])
+        $pending = Prestasi::with(['user', 'formPrestasi', 'anggota', 'tingkatPrestasi', 'capaianPrestasi'])
             ->where('status', 'Pending')
             ->latest()
             ->paginate(10, ['*'], 'p_page')
             ->withQueryString();
 
-        // Data yang sudah diproses (Approved / Rejected)
-        $validated = Prestasi::with(['user', 'formPrestasi', 'anggota'])
+        $validated = Prestasi::with(['user', 'formPrestasi', 'anggota', 'tingkatPrestasi', 'capaianPrestasi'])
             ->whereIn('status', ['Approved', 'Rejected'])
             ->latest()
             ->paginate(10, ['*'], 'v_page')
@@ -360,13 +385,10 @@ class PrestasiController extends Controller
         return view('prestasi.validasi', compact('pending', 'validated', 'tab'));
     }
 
-    /**
-     * 11. Update Status (Setujui / Tolak Satuan)
-     */
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:Approved,Rejected,Pending', // Gunakan kata yang simpel
+            'status' => 'required|in:Approved,Rejected,Pending',
             'pesan_revisi' => 'nullable|string'
         ]);
 
@@ -381,9 +403,6 @@ class PrestasiController extends Controller
         return back()->with('success', $msg);
     }
 
-    /**
-     * Validasi Massal
-     */
     public function validasiMassal(Request $request)
     {
         $request->validate([
@@ -402,7 +421,7 @@ class PrestasiController extends Controller
 
     public function validasiShow($id)
     {
-        $prestasi = Prestasi::with(['user.prodi.jurusan.fakultas', 'formPrestasi', 'anggota'])
+        $prestasi = Prestasi::with(['user.prodi.jurusan.fakultas', 'formPrestasi', 'anggota', 'tingkatPrestasi', 'capaianPrestasi'])
             ->findOrFail($id);
 
         $fields = \App\Models\FieldFormPrestasi::where('form_prestasi_id', $prestasi->form_prestasi_id)

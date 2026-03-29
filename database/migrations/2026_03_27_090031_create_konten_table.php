@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('judul');
             $table->string('slug')->unique();
+            $table->string('kategori')->default('Informasi');
             $table->longText('isi_konten');
             $table->string('gambar_cover')->nullable();
             $table->boolean('is_aktif')->default(true);

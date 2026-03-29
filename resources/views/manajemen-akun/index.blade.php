@@ -1,84 +1,101 @@
-
 @extends('layouts.app')
 
 @section('content')
 
-<div  class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-     <h3 class="text-xl font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
-    @if(Auth::user()->hasPermission('akun.manage_user'))
-    <a href="{{ route('akun.create') }}" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#004d26] transition-colors shadow-sm cursor-pointer">
-        <i class="bi bi-plus-lg"></i> Tambah Akun
-    </a>
-    @endif
+{{-- HEADER HALAMAN & TOMBOL AKSI --}}
+<div class="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+    <h3 class="text-2xl font-black text-gray-800 tracking-tight">Manajemen Akun</h3>
+    
+    <div class="flex items-center gap-3">
+        {{-- TOMBOL SYNC DATA LAMA --}}
+        @if(Auth::user()->hasPermission('akun.manage_user'))
+        <a href="{{ route('manajemen-akun.sync-prodi') }}" onclick="return confirm('Proses ini akan memakan waktu beberapa saat. Yakin ingin sinkronisasi massal Prodi dan Angkatan?')" class="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-colors shadow-sm cursor-pointer">
+            <i class="bi bi-arrow-repeat"></i> Sinkronisasi Data
+        </a>
+        @endif
+
+        {{-- TOMBOL TAMBAH AKUN --}}
+        @if(Auth::user()->hasPermission('akun.manage_user'))
+        <a href="{{ route('akun.create') }}" class="inline-flex items-center gap-2 bg-[#006633] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#004d26] transition-colors shadow-sm cursor-pointer">
+            <i class="bi bi-plus-lg"></i> Tambah Akun
+        </a>
+        @endif
+    </div>
 </div>
 
 {{-- PROGRESS BAR IMPORT --}}
-<div id="import-container" class="hidden mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-    <div class="flex justify-between items-center mb-1.5">
-        <span class="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2">
-            <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></div>
-            Importing: <span id="import-stats">0 / 0</span>
+<div id="import-container" class="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl shadow-sm">
+    <div class="flex justify-between items-center mb-2.5">
+        <span class="text-xs font-black text-blue-700 uppercase flex items-center gap-2 tracking-wider">
+            <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+            Proses Import Excel: <span id="import-stats" class="ml-1">0 / 0</span>
         </span>
     </div>
-    <div class="w-full bg-blue-200/30 h-1.5 rounded-full overflow-hidden">
+    <div class="w-full bg-blue-200/40 h-2.5 rounded-full overflow-hidden">
         <div id="import-bar" class="bg-blue-600 h-full transition-all duration-500" style="width: 0%"></div>
     </div>
 </div>
 
-<div class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6 relative">
+<div class="w-full bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 relative">
     
-    {{-- FLOATING BULK ACTION BAR (Direvisi: Lebih Kalem & Elegan) --}}
-    <div id="bulk-action-bar" class="hidden absolute top-0 left-0 w-full h-[53px] bg-green-50/95 backdrop-blur-sm border-b border-green-200 z-20 items-center justify-between px-4 animate-in slide-in-from-top duration-300">
+    {{-- FLOATING BULK ACTION BAR --}}
+    <div id="bulk-action-bar" class="hidden absolute top-0 left-0 w-full h-[70px] bg-green-50/95 backdrop-blur-sm border-b border-green-200 z-20 items-center justify-between px-6 animate-in slide-in-from-top duration-300">
         <div class="flex items-center gap-3">
-            <span class="bg-[#006633] text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm" id="selected-count">0</span>
+            <span class="bg-[#006633] text-white text-xs font-black px-2.5 py-1 rounded-full shadow-sm" id="selected-count">0</span>
             <span class="text-xs font-bold text-[#006633] uppercase tracking-wider">Akun Terpilih</span>
         </div>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
             @if($statusTab === 'pending')
-                <button onclick="submitBulk('activate')" class="bg-[#006633] hover:bg-[#004d26] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Aktivasi</button>
+                <button onclick="submitBulk('activate')" class="bg-[#006633] hover:bg-[#004d26] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm">Aktivasi</button>
             @else
-                <button onclick="submitBulk('deactivate')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Nonaktifkan</button>
+                <button onclick="submitBulk('deactivate')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm">Nonaktifkan</button>
             @endif
             
-            <button onclick="submitBulk('delete')" class="bg-white border border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm">Hapus</button>
-            <button onclick="unselectAll()" class="text-gray-500 hover:text-gray-800 text-[10px] font-bold uppercase px-2">Batal</button>
+            <button onclick="submitBulk('delete')" class="bg-white border border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm">Hapus</button>
+            <button onclick="unselectAll()" class="text-gray-500 hover:text-gray-800 text-[10px] font-bold uppercase tracking-wider px-3">Batal</button>
         </div>
     </div>
 
-    {{-- FILTER & SEARCH --}}
-    <div class="px-4 py-3 border-b border-gray-50 flex flex-col lg:flex-row justify-between items-center gap-3 bg-gray-50/30">
-        <div class="flex gap-1.5">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'aktif', 'page' => 1]) }}" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider {{ $statusTab === 'aktif' ? 'bg-[#006633] text-white' : 'bg-white text-gray-400 border border-gray-100' }}">Aktif</a>
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'pending', 'page' => 1]) }}" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider {{ $statusTab === 'pending' ? 'bg-orange-500 text-white' : 'bg-white text-gray-400 border border-gray-100' }}">
-                Pending @if($pendingCount > 0) <span class="ml-1 px-1 py-0.5 bg-white text-orange-600 rounded-full text-[9px]">{{ $pendingCount }}</span> @endif
+    {{-- FILTER & SEARCH BAR (Dibuat Lebih Lega) --}}
+    <div class="px-6 py-5 border-b border-gray-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gray-50/30">
+        
+        {{-- Tab Status --}}
+        <div class="flex gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm w-full lg:w-max">
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'aktif', 'page' => 1]) }}" class="flex-1 lg:flex-none text-center px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors {{ $statusTab === 'aktif' ? 'bg-[#006633] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50' }}">
+                Akun Aktif
+            </a>
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'pending', 'page' => 1]) }}" class="flex-1 lg:flex-none text-center px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 {{ $statusTab === 'pending' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50' }}">
+                Pending 
+                @if($pendingCount > 0) 
+                    <span class="px-1.5 py-0.5 {{ $statusTab === 'pending' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-600' }} rounded-full text-[9px] font-black">{{ $pendingCount }}</span> 
+                @endif
             </a>
         </div>
-        <form id="search-form" action="{{ url()->current() }}" method="GET" class="relative w-full lg:w-max">
+
+        {{-- Form Pencarian --}}
+        <form id="search-form" action="{{ url()->current() }}" method="GET" class="relative w-full lg:w-80">
             <input type="hidden" name="tab" value="{{ $statusTab }}">
             <input type="hidden" name="sort" value="{{ request('sort') }}">
             <input type="hidden" name="direction" value="{{ request('direction') }}">
+            @if(request('role_id')) <input type="hidden" name="role_id" value="{{ request('role_id') }}"> @endif
             
-            {{-- TAMBAHKAN INI: Agar filter role tidak hilang saat mencari nama --}}
-            @if(request('role_id'))
-                <input type="hidden" name="role_id" value="{{ request('role_id') }}">
-            @endif
-            
-            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]"></i>
-            <input type="text" id="search-input" name="search" value="{{ request('search') }}" placeholder="Cari data..." autocomplete="off" class="w-full lg:w-64 pl-8 pr-4 py-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:border-[#006633] transition-all">
+            <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="search-input" name="search" value="{{ request('search') }}" placeholder="Cari nama, NIM, email..." autocomplete="off" class="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-[#006633] focus:ring-1 focus:ring-[#006633] transition-all shadow-sm font-medium">
         </form>
     </div>
 
-    <div class="w-full overflow-x-auto min-h-[300px] pb-32">
-        <table class="w-full text-left border-collapse min-w-[800px]">
-            <thead class="bg-gray-50/50 border-b border-gray-100">
+    {{-- AREA TABEL (Tetap Compact/Slim untuk Data) --}}
+    <div class="w-full overflow-x-auto custom-scrollbar min-h-[300px]">
+        <table class="w-full text-left border-collapse min-w-[900px]">
+            <thead class="bg-gray-50/80 border-b border-gray-100">
                 <tr>
-                    <th class="px-4 py-3 w-10"><input type="checkbox" id="select-all" class="rounded border-gray-300 text-[#006633] focus:ring-[#006633]"></th>
-                    <th class="px-2 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">No</th>
+                    <th class="px-6 py-4 w-10"><input type="checkbox" id="select-all" class="rounded border-gray-300 text-[#006633] focus:ring-[#006633]"></th>
+                    <th class="px-2 py-4 w-12 text-[10px] font-black text-gray-400 uppercase tracking-widest">No</th>
                     
-                    {{-- KOLOM USER (Bisa di-sort) --}}
-                    <th class="px-4 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                    {{-- KOLOM USER --}}
+                    <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                         <a href="{{ request()->fullUrlWithQuery(['sort' => 'name', 'direction' => request('sort') === 'name' && request('direction') === 'asc' ? 'desc' : 'asc']) }}" class="flex items-center gap-1.5 w-max hover:text-gray-700 transition-colors">
-                            User
+                            Informasi Pengguna
                             <div class="flex flex-col text-[8px] -space-y-0.5">
                                 <i class="bi bi-caret-up-fill {{ request('sort') === 'name' && request('direction') === 'asc' ? 'text-[#006633]' : 'text-gray-300' }}"></i>
                                 <i class="bi bi-caret-down-fill {{ request('sort') === 'name' && request('direction') === 'desc' ? 'text-[#006633]' : 'text-gray-300' }}"></i>
@@ -86,34 +103,33 @@
                         </a>
                     </th>
                     
-                    {{-- KOLOM AKSES (Filter by Role) --}}
-                    <th class="px-4 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest relative">
+                    {{-- KOLOM AKSES (Filter Role) --}}
+                    <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest relative z-10">
                         <button type="button" onclick="toggleRoleFilter(event)" class="flex items-center gap-1.5 hover:text-gray-700 transition-colors focus:outline-none">
-                            Akses
-                            <i class="bi bi-person-fill text-xs {{ request('role_id') ? 'text-[#006633]' : 'text-gray-300' }}"></i>
+                            Hak Akses
+                            <i class="bi bi-funnel-fill text-xs {{ request('role_id') ? 'text-[#006633]' : 'text-gray-300' }}"></i>
                         </button>
 
-                        {{-- Dropdown Menu Role --}}
-                        <div id="role-dropdown" class="hidden absolute top-full left-4 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 normal-case font-medium">
-                            <a href="{{ request()->fullUrlWithQuery(['role_id' => null, 'page' => 1]) }}" class="block px-4 py-2 text-[11px] transition-colors {{ !request('role_id') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50' }}">
-                                <i class="bi bi-people-fill mr-2"></i> Semua Akses
+                        {{-- Dropdown Role --}}
+                        <div id="role-dropdown" class="hidden absolute top-full left-4 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl py-2 normal-case font-medium">
+                            <a href="{{ request()->fullUrlWithQuery(['role_id' => null, 'page' => 1]) }}" class="block px-4 py-2.5 text-xs transition-colors {{ !request('role_id') ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50' }}">
+                                <i class="bi bi-grid-fill mr-2"></i> Semua Hak Akses
                             </a>
                             <div class="h-px bg-gray-100 my-1"></div>
-                            
-                            {{-- Looping data role dari Controller --}}
                             @foreach($roles as $role)
-                                <a href="{{ request()->fullUrlWithQuery(['role_id' => $role->id, 'page' => 1]) }}" class="block px-4 py-2 text-[11px] transition-colors {{ request('role_id') == $role->id ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50' }}">
+                                <a href="{{ request()->fullUrlWithQuery(['role_id' => $role->id, 'page' => 1]) }}" class="block px-4 py-2.5 text-xs transition-colors {{ request('role_id') == $role->id ? 'bg-[#006633]/10 text-[#006633] font-bold' : 'text-gray-600 hover:bg-gray-50' }}">
                                     {{ $role->nama_role }}
                                 </a>
                             @endforeach
                         </div>
                     </th>
-                    <th class="px-4 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
                     
-                    {{-- KOLOM TANGGAL DAFTAR (Bisa di-sort) --}}
-                    <th class="px-4 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                    <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                    
+                    {{-- KOLOM TANGGAL DAFTAR --}}
+                    <th class="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                         <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => request('sort') === 'created_at' && request('direction') === 'asc' ? 'desc' : 'asc']) }}" class="flex items-center gap-1.5 w-max hover:text-gray-700 transition-colors">
-                            Tanggal Daftar
+                            Tgl. Terdaftar
                             <div class="flex flex-col text-[8px] -space-y-0.5">
                                 <i class="bi bi-caret-up-fill {{ request('sort') === 'created_at' && request('direction') === 'asc' ? 'text-[#006633]' : 'text-gray-300' }}"></i>
                                 <i class="bi bi-caret-down-fill {{ request('sort') === 'created_at' && request('direction') === 'desc' ? 'text-[#006633]' : 'text-gray-300' }}"></i>
@@ -121,55 +137,77 @@
                         </a>
                     </th>
 
-                    <th class="px-4 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Aksi</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($users as $index => $user)
-                <tr class="hover:bg-gray-50/30 transition-colors group">
-                    <td class="px-4 py-2"><input type="checkbox" class="row-checkbox rounded border-gray-300 text-[#006633]" value="{{ $user->id }}"></td>
-                    <td class="px-2 py-2 text-[11px] font-bold text-gray-400">{{ $users->firstItem() + $index }}</td>
+                <tr class="hover:bg-gray-50/50 transition-colors group">
+                    <td class="px-6 py-2.5"><input type="checkbox" class="row-checkbox rounded border-gray-300 text-[#006633] cursor-pointer" value="{{ $user->id }}"></td>
+                    <td class="px-2 py-2.5 text-xs font-bold text-gray-400">{{ $users->firstItem() + $index }}</td>
                     
-                    {{-- Data User --}}
-                    <td class="px-4 py-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-lg bg-green-50 text-[#006633] flex items-center justify-center font-bold text-[10px]">{{ strtoupper(substr($user->name, 0, 1)) }}</div>
+                    {{-- Kolom Data User --}}
+                    <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-50 border border-green-100 text-[#006633] flex items-center justify-center font-black text-xs shrink-0">
+                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                            </div>
                             <div class="min-w-0">
-                                <p class="text-xs font-bold text-gray-800 truncate leading-tight">{{ $user->name }}</p>
-                                <p class="text-[10px] text-gray-400">{{ $user->nim_nip }}</p>
+                                <p class="text-sm font-bold text-gray-800 truncate leading-tight">{{ $user->name }}</p>
+                                <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-wider uppercase">{{ $user->nim_nip }}</p>
                             </div>
                         </div>
                     </td>
                     
-                    {{-- Akses & Status --}}
-                    <td class="px-4 py-2"><span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black uppercase rounded">{{ $user->role->nama_role }}</span></td>
-                    <td class="px-4 py-2 text-center">
-                        <span class="text-[9px] font-bold {{ $user->is_active ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50' }} px-1.5 py-0.5 rounded uppercase">{{ $user->is_active ? 'Aktif' : 'Pending' }}</span>
+                    {{-- Kolom Hak Akses --}}
+                    <td class="px-4 py-2.5">
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 text-[9px] font-black uppercase tracking-wider rounded-md">
+                            {{ $user->role->nama_role }}
+                        </span>
                     </td>
                     
-                    {{-- Tanggal Daftar --}}
-                    <td class="px-4 py-2 text-[11px] font-medium text-gray-500">
+                    {{-- Kolom Status --}}
+                    <td class="px-4 py-2.5 text-center">
+                        <span class="inline-flex items-center px-2 py-1 border text-[9px] font-black uppercase tracking-wider rounded-md {{ $user->is_active ? 'bg-green-50 border-green-200 text-green-600' : 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' }}">
+                            {{ $user->is_active ? 'Aktif' : 'Pending' }}
+                        </span>
+                    </td>
+                    
+                    {{-- Kolom Tanggal --}}
+                    <td class="px-4 py-2.5 text-xs font-medium text-gray-600">
                         {{ $user->created_at ? $user->created_at->format('d M Y') : '-' }}
                     </td>
 
-                    {{-- Tombol Aksi (Direvisi: Selalu Tampil) --}}
-                    <td class="px-4 py-2">
-                        <div class="flex justify-center gap-1.5">
-                            <a href="{{ route('akun.edit', $user->id) }}" class="w-6 h-6 rounded-md bg-yellow-50 text-yellow-600 hover:bg-yellow-500 hover:text-white flex items-center justify-center transition-all"><i class="bi bi-pencil-square text-xs"></i></a>
-                            <form action="{{ route('akun.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Hapus akun ini?')">
+                    {{-- Kolom Aksi --}}
+                    <td class="px-6 py-2.5">
+                        <div class="flex justify-center gap-2">
+                            <a href="{{ route('akun.edit', $user->id) }}" class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-yellow-500 hover:border-yellow-400 hover:bg-yellow-50 flex items-center justify-center transition-all shadow-sm tooltip" title="Edit Akun"><i class="bi bi-pencil-square text-sm"></i></a>
+                            
+                            <form action="{{ route('akun.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Hapus permanen akun ini?')" class="inline">
                                 @csrf @method('DELETE')
-                                <button class="w-6 h-6 rounded-md bg-red-50 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"><i class="bi bi-trash-fill text-xs"></i></button>
+                                <button class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-red-500 hover:border-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm tooltip" title="Hapus Akun"><i class="bi bi-trash3-fill text-sm"></i></button>
                             </form>
                         </div>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="p-8 text-center text-xs text-gray-400 italic">Data tidak ditemukan.</td></tr>
+                <tr>
+                    <td colspan="100%" class="px-6 py-16 text-center text-gray-400">
+                        <i class="bi bi-people text-4xl mb-3 block opacity-50"></i>
+                        <p class="text-sm font-medium">Belum ada data akun yang ditemukan.</p>
+                    </td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-    <div class="p-3 bg-gray-50/30 border-t border-gray-50">{{ $users->links() }}</div>
+    
+    {{-- Pagination Bar --}}
+    @if($users->hasPages())
+    <div class="p-4 border-t border-gray-100 bg-gray-50/50">
+        {{ $users->links() }}
+    </div>
+    @endif
 </div>
 
 {{-- Form Tersembunyi Bulk --}}
@@ -252,10 +290,13 @@
         clearTimeout(t);
         t = setTimeout(() => sForm.submit(), 500);
     });
+    
+    // Taruh cursor kembali di akhir teks biar enak ketiknya
+    const val = sInput.value; sInput.value = ''; sInput.focus(); sInput.value = val;
 
     function toggleRoleFilter(e) {
-    e.stopPropagation(); // Biar dropdown nggak langsung ketutup
-    document.getElementById('role-dropdown').classList.toggle('hidden');
+        e.stopPropagation(); 
+        document.getElementById('role-dropdown').classList.toggle('hidden');
     }
 
     document.addEventListener('click', function(e) {

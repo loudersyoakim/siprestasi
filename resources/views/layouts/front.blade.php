@@ -128,6 +128,7 @@
         </div>
     </footer>
 
+    <script src="{{ asset('js/chart.min.js') }}"></script>
     {{-- SCRIPT SCROLL SHRINK & MOBILE MENU --}}
     <script>
         document.addEventListener("DOMContentLoaded", function () {

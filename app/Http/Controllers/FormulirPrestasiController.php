@@ -145,4 +145,22 @@ class FormulirPrestasiController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'Urutan berhasil disimpan!']);
     }
+
+    public function updateStatis(Request $request, $id)
+    {
+        $form = FormPrestasi::findOrFail($id);
+
+        // Simpan data toggle (karena checkbox un-checked tidak terkirim, kita tangkap lewat request default)
+        $setting = [
+            'nama_kegiatan' => $request->has('setting_statis.nama_kegiatan'),
+            'tingkat'       => $request->has('setting_statis.tingkat'),
+            'capaian'       => $request->has('setting_statis.capaian'),
+            'tahun'         => $request->has('setting_statis.tahun'),
+            'tanggal'       => $request->has('setting_statis.tanggal'),
+        ];
+
+        $form->update(['setting_statis' => $setting]);
+
+        return back()->with('success', 'Pengaturan atribut bawaan sistem berhasil disimpan!');
+    }
 }

@@ -6,113 +6,106 @@ use Illuminate\Http\Request;
 use App\Models\Konten;
 use App\Models\LandingSetting;
 use App\Models\User;
+use App\Models\Prestasi;
+use App\Models\FormPrestasi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Carbon\Carbon;
 
 class LandingController extends Controller
 {
-    /**
-     * Helper untuk mengambil dan menggabungkan SEMUA pengaturan
-     * (Dari tabel pengaturan_sistem lama + landing_settings baru)
-     */
     private function getPengaturan()
     {
-        // 1. Ambil pengaturan sistem dasar (Nama Web, Kontak, dll)
         $pengaturanSistem = DB::table('pengaturan_sistem')->pluck('nilai', 'kunci')->toArray();
-
-        // 2. Ambil pengaturan tampilan landing (Hero, Widget Leaderboard, dll)
         $pengaturanLanding = [];
         if (Schema::hasTable('landing_settings')) {
             $landingSettingsDb = LandingSetting::all();
             foreach ($landingSettingsDb as $setting) {
-                if ($setting->type === 'toggle') {
-                    // Jika toggle, simpan status true/false
-                    $pengaturanLanding[$setting->key] = (bool) $setting->is_active;
-                } else {
-                    // Jika text/number, simpan nilainya kalau aktif. Kalau mati, false.
-                    $pengaturanLanding[$setting->key] = $setting->is_active ? $setting->value : false;
-                }
+                $pengaturanLanding[$setting->key] = $setting->value;
             }
         }
-
-        // Gabungkan kedua array pengaturan agar bisa dipakai global di semua view
         return array_merge($pengaturanSistem, $pengaturanLanding);
     }
 
-    /**
-     * 1. Halaman Beranda Utama (Landing Page)
-     */
     public function index()
     {
         $pengaturan = $this->getPengaturan();
 
-        // --- Logika Top Leaderboard Otomatis ---
-        $leaderboard = [];
-        // Cek apakah Admin menyalakan fitur leaderboard dan set limitnya
-        if (!empty($pengaturan['show_leaderboard'])) {
-            $limit = (int) $pengaturan['show_leaderboard'];
+        $allWidgets = isset($pengaturan['active_widgets']) ? json_decode($pengaturan['active_widgets'], true) : [];
+        $activeWidgets = array_values(array_filter($allWidgets, function ($w) {
+            return isset($w['is_active']) && $w['is_active'] == '1';
+        }));
 
-            // Ambil mahasiswa yang punya prestasi "Approved" dan hitung totalnya
-            // (Catatan: Pastikan relasi di model User Abang bernama 'prestasi' atau 'prestasis')
-            $leaderboard = User::with('prodi')
-                ->whereHas('prestasis', function ($query) { // <--- Tambah huruf 's'
-                    $query->where('status', 'Approved');
-                })
-                ->withCount(['prestasis as total_poin' => function ($query) { // <--- Tambah huruf 's'
-                    $query->where('status', 'Approved');
-                }])
-                ->orderByDesc('total_poin')
-                ->take($limit)
-                ->get();
-        }
+        $widgetData = [];
 
-        // --- Logika Berita & Mading Digital ---
-        $kontenAktif = Konten::where('is_aktif', true)->latest()->get();
-        $headline = $kontenAktif->first();
-        // Skip 1 (karena udah jadi headline), lalu ambil 7 untuk list
-        $listBerita = $kontenAktif->skip(1)->take(7);
-
-        return view('landing', compact('pengaturan', 'headline', 'listBerita', 'leaderboard'));
-    }
-
-    /**
-     * 2. Halaman Daftar Semua Berita (Mading Publik)
-     */
-    public function indexAll(Request $request)
-    {
-        $pengaturan = $this->getPengaturan();
-        $query = Konten::where('is_aktif', true)->latest();
-
-        // Logika Pencarian
-        if ($request->has('search') && $request->search != '') {
-            $query->where('judul', 'like', '%' . $request->search . '%');
-        }
-
-        // Logika Filter Kategori
-        if ($request->has('category') && $request->category != 'semua') {
-            $query->where('kategori', $request->category);
-        }
-
-        $artikels = $query->paginate(9);
-
-        return view('daftar-artikel', compact('artikels', 'pengaturan'));
-    }
-
-    /**
-     * 3. Halaman Baca Artikel / Berita Detail
-     */
-    public function show($slug)
-    {
-        $pengaturan = $this->getPengaturan();
-        $artikel = Konten::where('slug', $slug)->where('is_aktif', true)->firstOrFail();
-
-        // Ambil 4 berita lainnya untuk rekomendasi di sidebar
-        $rekomendasi = Konten::where('is_aktif', true)
-            ->where('id', '!=', $artikel->id)
-            ->latest()
-            ->take(4)
+        // AMBIL DATA ASLI (Eager Loading agar relasi tingkatPrestasi & capaianPrestasi terbaca)
+        $allApproved = Prestasi::with(['user.fakultas', 'user.prodi', 'formPrestasi', 'tingkatPrestasi', 'capaianPrestasi'])
+            ->where('status', 'Approved')
             ->get();
 
-        return view('artikel', compact('artikel', 'rekomendasi', 'pengaturan'));
+        foreach ($activeWidgets as $index => $widget) {
+            $type = $widget['type'];
+
+            if ($type === 'leaderboard') {
+                $limit = (int) ($widget['limit'] ?? 5);
+                $widgetData[$index] = User::with('prodi')
+                    ->whereHas('prestasis', fn($q) => $q->where('status', 'Approved'))
+                    ->withCount(['prestasis as total_poin' => fn($q) => $q->where('status', 'Approved')])
+                    ->orderByDesc('total_poin')->take($limit)->get();
+            } elseif ($type === 'chart_distribusi') {
+                $source = $widget['data_source'] ?? 'fakultas';
+
+                if ($source === 'fakultas') {
+                    $grouped = $allApproved->groupBy(fn($p) => $p->user->fakultas->nama_fakultas ?? 'Lainnya');
+                } elseif ($source === 'prodi') {
+                    $grouped = $allApproved->groupBy(fn($p) => $p->user->prodi->nama_prodi ?? 'Lainnya');
+                } elseif ($source === 'kategori') {
+                    $grouped = $allApproved->groupBy(fn($p) => $p->formPrestasi->nama_form ?? 'Lainnya');
+                } elseif ($source === 'tingkat') {
+                    $grouped = $allApproved->groupBy(fn($p) => $p->tingkatPrestasi->nama_tingkat ?? 'Lainnya');
+                } elseif ($source === 'capaian') {
+                    $grouped = $allApproved->groupBy(fn($p) => $p->capaianPrestasi->nama_capaian ?? 'Lainnya');
+                } else {
+                    $grouped = collect([]);
+                }
+
+                $widgetData[$index] = [
+                    'labels' => $grouped->keys()->toArray(),
+                    'data' => $grouped->map(fn($items) => $items->count())->values()->toArray()
+                ];
+            } elseif ($type === 'chart_tren') {
+                $labels = [];
+                $data = [];
+
+                for ($i = 5; $i >= 0; $i--) {
+                    // PERBAIKAN: Tambahkan ->startOfMonth() sebelum subMonths
+                    // Ini biar hitungannya mulai dari tanggal 1, jadi nggak bakal overflow
+                    $date = Carbon::now()->startOfMonth()->subMonths($i);
+
+                    $labels[] = $date->translatedFormat('M Y');
+                    $data[] = $allApproved->filter(fn($p) => $p->updated_at->format('Y-m') === $date->format('Y-m'))->count();
+                }
+                $widgetData[$index] = ['labels' => $labels, 'data' => $data];
+            } elseif ($type === 'counter') {
+                // LOGIKA STATISTIK SESUAI PERMINTAAN ABANG
+                $widgetData[$index] = [
+                    'total_prestasi'  => $allApproved->count(),
+                    'mhs_berprestasi' => $allApproved->unique('user_id')->count(),
+                    'total_berita'    => Konten::where('is_aktif', true)->count(),
+                    'internasional'   => $allApproved->filter(fn($p) => str_contains(strtolower($p->tingkatPrestasi->nama_tingkat ?? ''), 'internasional'))->count(),
+                    'nasional'        => $allApproved->filter(fn($p) => str_contains(strtolower($p->tingkatPrestasi->nama_tingkat ?? ''), 'nasional') && !str_contains(strtolower($p->tingkatPrestasi->nama_tingkat ?? ''), 'internasional'))->count(),
+                    'wilayah_kota'    => $allApproved->filter(function ($p) {
+                        $tingkat = strtolower($p->tingkatPrestasi->nama_tingkat ?? '');
+                        return str_contains($tingkat, 'wilayah') || str_contains($tingkat, 'kota') || str_contains($tingkat, 'provinsi') || str_contains($tingkat, 'daerah');
+                    })->count(),
+                ];
+            }
+        }
+
+        $kontenAktif = Konten::where('is_aktif', true)->latest()->get();
+        $headline = $kontenAktif->first();
+        $listBerita = $kontenAktif->skip(1)->take(7);
+
+        return view('landing', compact('pengaturan', 'headline', 'listBerita', 'activeWidgets', 'widgetData'));
     }
 }

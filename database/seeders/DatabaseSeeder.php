@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
             PengaturanSeeder::class,     // 3. Masukkan Pengaturan Web & Landing Page
             FormPrestasiSeeder::class,     // 3. Masukkan Pengaturan Web & Landing Page
             UserSeeder::class,           // 4. Baru masukkan User (karena user butuh ID Role & Prodi)
-            LandingSettingSeeder::class,  
+            LandingSettingSeeder::class,
+            FormPrestasiSeeder::class,
+            AtributPrestasiSeeder::class
+        ]);
     }
 }
